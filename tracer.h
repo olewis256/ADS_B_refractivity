@@ -3,16 +3,13 @@
 
 #include <vector>
 #include <algorithm>
-#include <iomanip>
-#include <thread>
-#include <chrono>
+#include <cmath>
+
+#include "constants.h"
 
 class Tracer
 {
     private:
-
-        const double r0 = 6364.539;
-        const double pi = acos(-1);
 
         double h, u;
         double s, t;
@@ -22,8 +19,6 @@ class Tracer
         double r;
 
         double lam, mu;
-
-        std::vector<double> pos;
 
         double dw0_1, dw1_1, dw0_2, dw1_2, dw0_3, dw1_3;
 
@@ -58,7 +53,6 @@ std::vector<double> Tracer::forward(double h0, double u0, double dmax, double dr
 {
     steps = (int) 600/dr;
 
-    RK rungeK;
 
     h = h0;
     u = u0;
@@ -76,7 +70,7 @@ std::vector<double> Tracer::forward(double h0, double u0, double dmax, double dr
 
     for(int i(0); i < steps; i++)
     { 
-        r = h + r0;
+        r = h + EARTH_R;
 
         i_lev1 = std::upper_bound(n_h.begin(), n_h.end(), h);
 
@@ -114,7 +108,7 @@ std::vector<double> Tracer::forward(double h0, double u0, double dmax, double dr
         h = h + (k1h + 4*k2h + k3h)/6;
         u = u + (k1u + 4*k2u + k3u)/6;
 
-        s = s + t*r0*asin(cos(asin(u_i))*dr / (r0 + h));
+        s = s + t*EARTH_R*asin(cos(asin(u_i))*dr / (EARTH_R + h));
 
 
 
@@ -133,7 +127,7 @@ std::vector<double> Tracer::forward(double h0, double u0, double dmax, double dr
 
 }
 
-void Tracer::backprop(double h0, double u0, double dmax, double dr, std::vector<double>& n, std::vector<double>& n_init, std::vector<double>& n_h,
+void Tracer::backprop(double h0, double u0, double dmax, double dr, std::vector<double>& n, double n_init, std::vector<double>& n_h,
                       double lam0, double mu0, double lrate)
 
 // -----------------------------------------------------------------------------------------------------
@@ -186,7 +180,7 @@ void Tracer::backprop(double h0, double u0, double dmax, double dr, std::vector<
 
     for(int i(0); i < steps; i++)
     { 
-        r = h + r0;
+        r = h + EARTH_R;
 
         // k1 
         {
@@ -253,12 +247,12 @@ void Tracer::backprop(double h0, double u0, double dmax, double dr, std::vector<
         n[i_lev1 - 1 - n_h.begin()] = n[i_lev1 - 1 - n_h.begin()]*(1.0-gamma) + gamma*std::minmax(n[i_lev1 - 1 - n_h.begin()] - lrate*dn0, 0.0).second;
         n[i_lev1 - n_h.begin()] = n[i_lev1 - n_h.begin()]*(1.0-gamma) + gamma*std::minmax(n[i_lev1 - n_h.begin()] - lrate*dn1, 0.0).second;
 
-        n[0] = n_init[0];
+        n[0] = n_init;
 
         h = h + (k1h + 4*k2h + k3h)/6;
         u = u + (k1u + 4*k2u + k3u)/6;
 
-        s = s - r0*asin(cos(asin(u_i))*dr / (r0 + h)); // reverse ray tracing, so negative sign used
+        s = s - EARTH_R*asin(cos(asin(u_i))*dr / (EARTH_R + h)); // reverse ray tracing, so negative sign used
 
         mu = mu + (k1mu + 4*k2mu + k3mu)/6;
         lam = lam + (k1lam + 4*k2lam + k3lam)/6;

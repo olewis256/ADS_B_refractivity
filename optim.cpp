@@ -5,11 +5,12 @@
 #include <cstdio>
 
 #include "tracer.h"
-#include "integrate.h"
 #include "inputs.h"
 #include "adjoint.h"
+#include "constants.h"
 
 #include "spline.h"
+
 
 double n_lev = 30;
 double pi = acos(-1);

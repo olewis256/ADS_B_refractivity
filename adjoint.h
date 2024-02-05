@@ -34,9 +34,6 @@ class Adjoint
 {
     private:
 
-        const double r0 = 6364.539;
-        const double pi = acos(-1);
-
         std::vector<double> h, u, d;
         std::vector<double> n_optim, n_optim_h;
 
@@ -143,7 +140,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
             u_end = -init_pos[1];
             d_end = init_pos[2];
 
-            trace.backprop(h_end, u_end, d_end, dr, n_optim, n_target, n_optim_h, lam, mu,lrate);
+            trace.backprop(h_end, u_end, d_end, dr, n_optim, n_target[0], n_optim_h, lam, mu, lrate);
         
             progressBackProp(j, size);
 
