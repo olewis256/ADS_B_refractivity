@@ -10,7 +10,7 @@
 #include "../constants.h"
 
 int n_lev = 20;
-double dr = 0.001;
+double dr = 0.1;
 
 double u0, h0, s0;
 double ue, he, se;
@@ -40,7 +40,7 @@ int main()
 {      
 
     std::ostringstream file;
-    file << "../../Plots/PAPERII_grad_" << dr << "km.txt";
+    file << "../../Gradient/PAPERII_grad_" << dr << "km.txt";
     std::ofstream rfile(file.str());
 
     for (int k(0); k < n_lev; k++)
@@ -60,7 +60,7 @@ int main()
 
             n_init[i] = log(1.000 + 320*exp(-n_h[i]/8.0)/1e6);
             
-            n_target[i] = log(1.000 + 330*exp(-n_h[i]/8.0)/1e6);
+            n_target[i] = log(1.000 + 315*exp(-n_h[i]/8)/1e6);
 
         }
 
@@ -92,7 +92,7 @@ int main()
 
         std::cout << adj_n << ' ' << error << ' ' << 100*(adj_n - error)/error << std::endl;
         
-        rfile << adj_n << ' ' << error << ' ' << 100*(adj_n - error)/error << std::endl;
+        rfile << adj_n << ' ' << error << ' ' << n_h[k] << ' ' << k << std::endl;
         
     }
     rfile.close();
