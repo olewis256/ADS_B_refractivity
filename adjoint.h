@@ -6,8 +6,11 @@
 #include <iomanip>
 #include <thread>
 #include <chrono>
+#include <random>
 
 #include "tracer.h"
+
+std::default_random_engine gen(time(0));
 
 void progressBackProp(int progress, int total, int width = 50) {
 
@@ -61,6 +64,9 @@ class Adjoint
         double dw0, dw1;
         double dn0, dn1;
 
+        double perturb;
+        double AoA;
+
     public:
 
         Adjoint(const std::vector<double>& h0, const std::vector<double>& u0, const std::vector<double>& dmax, std::vector<double>& n, std::vector<double>& n_h)
@@ -69,7 +75,7 @@ class Adjoint
         {}
 
         std::vector<double> retrieve(double obs_height, int n_iter, double lrate, double dr);
-        std::vector<double> retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target);
+        std::vector<double> retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target, double noise);
 
 
 };
@@ -77,7 +83,7 @@ class Adjoint
 std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrate, double dr)
 {   
 
-    Tracer trace;
+    Tracer tracer;
 
     for (int i(0); i < n_iter; i++)
     {   
@@ -87,7 +93,7 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
         for (int j(0); j < size; j++)
         {
 
-            init_pos = trace.forward(obs_height, u[j], d[j], dr, n_optim, n_optim_h);
+            init_pos = tracer.trace(obs_height, u[j], d[j], dr, n_optim, n_optim_h);
 
             loss += pow((init_pos[0] - h[j]), 2);
 
@@ -111,14 +117,53 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
 
 };
 
-std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target)
+std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target, double noise)
 {   
 
-    Tracer trace;
+    Tracer tracer;
 
-    for(int k(0); k < size; k++)
+    std::cout << "Noise standard deviation: " << noise << "\n";
+
+    std::normal_distribution<double> distribution (0.0,noise);
+
+    if (noise > 0.0)
+    {   
+
+        std::ostringstream filenoise;
+        filenoise << "PAPERII_noise_NE_RK3_NEW_" << noise << ".txt";
+        std::ofstream rfilenoise(filenoise.str());
+
+        for(int k(0); k < size; k++)
+        {
+            perturb = distribution(gen);
+
+            target_pos.push_back(tracer.trace(obs_height, u[k], d[k], dr, n_target, n_optim_h)[0]);
+
+            AoA = asin(u[k]);
+            AoA += perturb*PI/180.0;
+            u[k] = sin(AoA);
+
+            rfilenoise << perturb*180.0/PI << std::endl; 
+
+        }
+
+        rfilenoise.close();
+
+    }
+    else if (noise < 0.0)
     {
-        target_pos.push_back(trace.forward(obs_height, u[k], d[k], dr, n_target, n_optim_h)[0]);
+        std::cerr << "Noise should be above or equal to 0.0 \n";
+    }
+
+    else
+    {
+        for(int k(0); k < size; k++)
+        {
+
+            target_pos.push_back(tracer.trace(obs_height, u[k], d[k], dr, n_target, n_optim_h)[0]);
+
+        }
+
     }
 
     for (int i(0); i < n_iter; i++)
@@ -129,7 +174,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
         for (int j(0); j < size; j++)
         {
 
-            init_pos = trace.forward(obs_height, u[j], d[j], dr, n_optim, n_optim_h);
+            init_pos = tracer.trace(obs_height, u[j], d[j], dr, n_optim, n_optim_h);
 
             loss += pow((init_pos[0] - target_pos[j]), 2);
 
@@ -140,7 +185,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
             u_end = -init_pos[1];
             d_end = init_pos[2];
 
-            trace.backprop(h_end, u_end, d_end, dr, n_optim, n_target[0], n_optim_h, lam, mu, lrate);
+            tracer.backprop(h_end, u_end, d_end, dr, n_optim, n_target[0], n_optim_h, lam, mu, lrate);
         
             progressBackProp(j, size);
 
@@ -148,7 +193,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
         
 
-        std::cout << "\n " << "iteration: " << i << ' ' << "loss: " << loss << std::endl;
+        std::cout << "\n " << "iteration: " << i << ' ' << "loss: " << loss << "\n" << std::endl;
 
     }
 

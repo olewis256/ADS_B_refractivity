@@ -35,12 +35,15 @@ class Tracer
         double gamma = 0.2;
 
         std::vector<double> final_pos;
+        std::vector<std::vector<double>> paths;
 
     public:
 
         std::vector<double> update_n;
 
-        std::vector<double> forward(double h0, double u0, double d, double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward);
+        std::vector<double> trace(double h0, double u0, double d, double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward);
+
+        std::vector<std::vector<double>> trace_paths(double h0, double u0, double d, double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward);
 
         void backprop(double h0, double u0, double d, double dr_i, std::vector<double>& n, double n_surface_true, std::vector<double>& n_h,
                                      double lam0, double mu0, double lrate);
@@ -48,7 +51,7 @@ class Tracer
 
 };
 
-std::vector<double> Tracer::forward(double h0, double u0, double dmax, double dr,
+std::vector<double> Tracer::trace(double h0, double u0, double dmax, double dr,
                                                  std::vector<double>& n, std::vector<double>& n_h, bool forward = true)
 {
     steps = (int) 600/dr;
@@ -105,6 +108,8 @@ std::vector<double> Tracer::forward(double h0, double u0, double dmax, double dr
         k3h = dr*(u - k1u + 2*k2u);
         k3u = dr*( (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u)) * ( n3 + 1 / (r - k1h + 2*k2h)));
 
+        final_pos = {h, u, s};
+
         h = h + (k1h + 4*k2h + k3h)/6;
         u = u + (k1u + 4*k2u + k3u)/6;
 
@@ -115,10 +120,6 @@ std::vector<double> Tracer::forward(double h0, double u0, double dmax, double dr
         if(s > dmax || s < 0)
         {
             
-            final_pos = {h, u, s};
-
-            //std::cout << h << std::endl;
-
             break;
         }
     }
@@ -257,7 +258,7 @@ void Tracer::backprop(double h0, double u0, double dmax, double dr, std::vector<
         mu = mu + (k1mu + 4*k2mu + k3mu)/6;
         lam = lam + (k1lam + 4*k2lam + k3lam)/6;
 
-        if( s < 1e-6 || h < 0.577)
+        if( s < 1e-6 || h < OBSERVER_H)
         {
 
             break;
@@ -267,5 +268,86 @@ void Tracer::backprop(double h0, double u0, double dmax, double dr, std::vector<
     }
 
 };
+
+std::vector<std::vector<double>> Tracer::trace_paths(double h0, double u0, double dmax, double dr,
+                                                 std::vector<double>& n, std::vector<double>& n_h, bool forward = true)
+{
+    steps = (int) 600/dr;
+
+
+    h = h0;
+    u = u0;
+
+    if (forward)
+    {
+        s = 0.0;
+        t = 1.0;
+    }
+    else
+    {
+        s = dmax;
+        t = -1.0;
+    }
+
+    std::vector<double> vals;
+    paths.clear();
+
+    for(int i(0); i < steps; i++)
+    { 
+
+        vals = {s, h, u};
+        paths.push_back(vals);
+    
+        r = h + EARTH_R;
+
+        i_lev1 = std::upper_bound(n_h.begin(), n_h.end(), h);
+
+        dw0_1 = - 1  / ( n_h[i_lev1 - n_h.begin()] - n_h[i_lev1 - 1 - n_h.begin()] );
+        dw1_1 = -1 * dw0_1;
+            
+        n1 = dw0_1*n[i_lev1 - 1 - n_h.begin()] + dw1_1*n[i_lev1 - n_h.begin()]; 
+
+
+        k1h = dr*u;
+        k1u = dr*( (1 - u*u) * (n1 + (1 / r)) );
+
+        i_lev2 = std::upper_bound(n_h.begin(), n_h.end(), (h + k1h/2));
+
+        dw0_2 = - 1  / ( n_h[i_lev2 - n_h.begin()] - n_h[i_lev2 - 1 - n_h.begin()] );
+        dw1_2 = -1 * dw0_2;
+
+        n2 = dw0_2*n[i_lev2 - 1 - n_h.begin()] + dw1_2*n[i_lev2 - n_h.begin()]; 
+
+        
+        k2h = dr*(u + k1u/2);
+        k2u = dr*( (1 - (u + k1u/2)*(u + k1u/2))  * ( n2 + 1 / (r + k1h/2)));
+
+        i_lev3 = std::upper_bound(n_h.begin(), n_h.end(), (h - k1h + 2*k2h));
+
+        dw0_3 = - 1  / ( n_h[i_lev3 - n_h.begin()] - n_h[i_lev3 - 1 - n_h.begin()] );
+        dw1_3 = -1 * dw0_3;
+
+        n3 = dw0_3*n[i_lev3 - 1 - n_h.begin()] + dw1_3*n[i_lev3 - n_h.begin()];
+
+
+        k3h = dr*(u - k1u + 2*k2u);
+        k3u = dr*( (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u)) * ( n3 + 1 / (r - k1h + 2*k2h)));
+
+        h = h + (k1h + 4*k2h + k3h)/6;
+        u = u + (k1u + 4*k2u + k3u)/6;
+
+        s = s + t*EARTH_R*asin(cos(asin(u_i))*dr / (EARTH_R + h));
+
+        
+
+        if(s > dmax || s < 0)
+        {
+            break;
+        }
+    }
+
+    return paths;
+
+}
 
 #endif

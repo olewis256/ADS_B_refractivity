@@ -107,6 +107,8 @@ class ADSB
 ADSB::ADSB(const std::string& file, int length)
     : file(file), length(length) {
 
+    std::cout << "Number of observations: " << length << std::endl;
+
 }
 
 void ADSB::process() 
