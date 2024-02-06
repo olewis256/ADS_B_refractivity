@@ -46,6 +46,7 @@ class Adjoint
         int size;
 
         double loss;
+        double n_rms;
         double h_target;
 
         std::vector<double> pos;
@@ -124,10 +125,14 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
     std::cout << "Noise standard deviation: " << noise << "\n";
 
+    std::cout << "Obs Height" << ' ' << obs_height << std::endl;
+
     std::normal_distribution<double> distribution (0.0,noise);
 
     if (noise > 0.0)
     {   
+
+        std::cout << "Noise added" << std::endl;
 
         std::ostringstream filenoise;
         filenoise << "PAPERII_noise_NE_RK3_NEW_" << noise << ".txt";
@@ -174,6 +179,16 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
     {   
 
         loss = 0.0;
+        n_rms = 0.0;
+        for (int jj(0); jj < size; jj++)
+        {
+            loss += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - target_pos[jj]), 2);
+        }
+
+        for (int jjj(0); jjj < n_optim.size(); jjj++)
+        {
+            n_rms += pow((exp(n_optim[jjj]) - exp(n_target[jjj]))*1e6, 2);
+        }
 
         for (int j(0); j < size; j++)
         {
@@ -182,23 +197,21 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
             init_pos = tracer.trace(obs_height, u[j], d[j], dr, n_optim, n_optim_h);
 
-            loss += pow((init_pos[0] - target_pos[j]), 2);
 
             lam = 2*(init_pos[0] - target_pos[j]);
             mu = 0.0;
 
             h_end = init_pos[0];
-            u_end = -init_pos[1];
-            d_end = init_pos[2];
+            u_end = sin(-asin(init_pos[1]));
 
-            tracer.backprop(h_end, u_end, d_end, dr, n_optim, n_target[0], n_optim_h, lam, mu, lrate);
+            tracer.backprop(h_end, u_end, d[j], dr, n_optim, n_target[0], n_optim_h, lam, mu, lrate, i);
         
 
         }
 
         
 
-        std::cout << "\n " << "iteration: " << i << ' ' << "loss: " << loss << "\n" << std::endl;
+        std::cout << "\n " << "iteration: " << i << ' ' << "loss: " << loss << " RMS N: " << sqrt(n_rms / n_optim.size()) << "\n" << std::endl;;            
 
     }
 
