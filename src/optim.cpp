@@ -9,8 +9,7 @@
 #include "adjoint.h"
 #include "constants.h"
 
-#include "spline.h"
-
+#include "../externals/spline.h"
 
 double n_lev = 30;
 
@@ -25,7 +24,7 @@ int main()
 
     // Read in refractivity data
 
-    Atmosphere atmosphere_input("Refractivity_data/22Sep_12z_Watnall_profile.txt");
+    Atmosphere atmosphere_input("../Refractivity_data/22Sep_12z_Watnall_profile.txt");
     atmosphere_input.process();
 
     const std::vector<double>& N_profile = atmosphere_input.N();
@@ -33,7 +32,7 @@ int main()
 
     // Read in ADS-B data
 
-    ADSB adsb_input("ADS_B_data/sep_NE_paperII_input_5.000_central10.txt", 1000);
+    ADSB adsb_input("../ADS_B_data/sep_NE_paperII_input_5.000_central10.txt", 5000);
     adsb_input.process();
 
     const std::vector<double> u_adsb = adsb_input.sin_obsAoA();
@@ -62,22 +61,33 @@ int main()
 
     // Tracing and learning parameters
     double dr = 0.1;
-    double learn_rate = 5e-11;
-    int iterations = 30;
+    double learn_rate =2.5e-9;
+    int iterations = 20;
     double noise_std = 0.0;//0.01;
 
-    std::vector<double> retrieval = Profile.retrieve_synthetic(OBSERVER_H,iterations, learn_rate, dr, logn_target, noise_std);
+    std::vector<double> retrieval = Profile.retrieve_synthetic(OBSERVER_H, iterations, learn_rate, dr, logn_target, noise_std);
 
     std::ostringstream file;
-    file << "PAPERII_retrieve_NE_RK3_NEW_0.00.txt";
+    file << "../Retrievals/PAPERII_retrieve_NE_RK3_NEW_0.00.txt";
     std::ofstream rfile(file.str());
 
     for(int i(0); i < n_lev; i++)
     {
-    rfile << (exp(retrieval[i]) - 1)*1e6 << ' ' << n_h[i] << ' '  << (exp(logn_target[i]) - 1)*1e6 << ' ' << (exp(logn_init[i]) - 1)*1e6 << std::endl;
+    rfile << (exp(retrieval[i]) - 1.0)*1e6 << ' ' << n_h[i] << ' '  << (exp(logn_target[i]) - 1.0)*1e6 << ' ' << (exp(logn_init[i]) - 1.0)*1e6 << std::endl;
     }
 
     rfile.close();
+
+    std::ostringstream file2;
+    file2 << "../aircraft_dist/Height_distribution.txt";
+    std::ofstream rfile2(file2.str());
+
+    for(int i(0); i < h_adsb.size(); i++)
+    {
+    rfile2 << d_adsb[i] << ' ' << h_adsb[i] << std::endl;
+    }
+
+    rfile2.close();
 
     return 0;
 }

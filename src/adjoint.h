@@ -127,6 +127,8 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
     std::cout << "Obs Height" << ' ' << obs_height << std::endl;
 
+    target_pos.clear();
+
     std::normal_distribution<double> distribution (0.0,noise);
 
     if (noise > 0.0)
@@ -173,7 +175,6 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
     std::vector<double> m(n_optim.size(), 0.0);
     std::vector<double> v(n_optim.size(), 0.0);
-    std::cout << m[0] << std::endl;
 
     for (int i(0); i < n_iter; i++)
     {   
@@ -197,14 +198,14 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
             init_pos = tracer.trace(obs_height, u[j], d[j], dr, n_optim, n_optim_h);
 
-
             lam = 2*(init_pos[0] - target_pos[j]);
             mu = 0.0;
 
             h_end = init_pos[0];
-            u_end = sin(-asin(init_pos[1]));
+            u_end = -init_pos[1];
+            d_end = init_pos[2];
 
-            tracer.backprop(h_end, u_end, d[j], dr, n_optim, n_target[0], n_optim_h, lam, mu, lrate, i);
+            tracer.backprop(h_end, u_end, d_end, dr, n_optim, n_target[0], n_optim_h, lam, mu, lrate, i, m, v);
         
 
         }
@@ -214,6 +215,10 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
         std::cout << "\n " << "iteration: " << i << ' ' << "loss: " << loss << " RMS N: " << sqrt(n_rms / n_optim.size()) << "\n" << std::endl;;            
 
     }
+
+    
+
+
 
     return n_optim;
 

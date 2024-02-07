@@ -32,7 +32,7 @@ class Tracer
 
         std::vector<double>::iterator i_lev1, i_lev2, i_lev3;
 
-        const double gamma = 0.2;
+        const double gamma = 0.99;
 
         std::vector<double> final_pos;
         std::vector<std::vector<double>> paths;
@@ -43,13 +43,10 @@ class Tracer
         // Adam optimisier stuff
         //-----------------------
 
+        double eta = 0.01;
         double beta1 = 0.9;
         double beta2 = 0.999;
         double epsilon = 1e-8;
-        double m0 = 0.0;
-        double v0 = 0.0;
-        double m1 = 0.0;
-        double v1 = 0.0;
         double m_est0 = 0.0;
         double m_est1 = 0.0;
         double v_est0 = 0.0;
@@ -64,7 +61,7 @@ class Tracer
         std::vector<std::vector<double>> trace_paths(double h0, double u0, double d, double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward);
 
         void backprop(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, const double n_surface_true, std::vector<double>& n_h,
-                      const double lam0, const double mu0, const double lrate, int iter, int* index_n = nullptr, double* dn_adj = nullptr, double* obs_height = nullptr);
+                      const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v, int* index_n = nullptr, double* dn_adj = nullptr, double* obs_height = nullptr);
 
 
 };
@@ -126,6 +123,7 @@ std::vector<double> Tracer::trace(const double h0, const double u0, const double
         k3h = dr*(u - k1u + 2*k2u);
         k3u = dr*( (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u)) * ( n3 + 1 / (r - k1h + 2*k2h)));
 
+        u_i = u;
         
         h = h + (k1h + 4*k2h + k3h)/6;
         u = u + (k1u + 4*k2u + k3u)/6;
@@ -134,7 +132,7 @@ std::vector<double> Tracer::trace(const double h0, const double u0, const double
 
 
 
-        if(s > dmax || s < 0)
+        if(s >= dmax || s <= 0)
         {
             final_pos = {h, u, s};
 
@@ -147,7 +145,7 @@ std::vector<double> Tracer::trace(const double h0, const double u0, const double
 }
 
 void Tracer::backprop(const double h0, const double u0, const double dmax, const double dr, std::vector<double>& n, const double n_init, std::vector<double>& n_h,
-                      const double lam0, const double mu0, const double lrate, int iter, int* index_n, double* dn_adj, double* obs_height)
+                      const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v, int* index_n, double* dn_adj, double* obs_height)
 
 // -----------------------------------------------------------------------------------------------------
 //
@@ -248,22 +246,24 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
         k3u = dr*( (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u)) * ( n3 + 1 / (r - k1h + 2*k2h)));
 
         // k lam and mu
+
+
         {
-            k1lam = dr*( mu * (1 - u*u) * ( (n1*n1) + (1 / (r*r)) ) );
-            k1mu = dr*( -lam + 2*mu*u*(n1 + (1 / r)));
+            k1lam = dr*( mu * (1 - u*u) * ( n1*n1 + 1 / (r*r) ) );
+            k1mu = dr*( -lam + 2 * mu * u * (n1 + (1 / r)));
 
-            k2lam = dr*( ( (mu + k1mu/2) * (1 - (u + k1u/2)*(u + k1u/2) ) ) * ( (n2*n2) + 1 / ( (r + k1h/2)*(r + k1h/2) ) ) );
-            k2mu = dr*( -(lam + k1lam/2) + 2*(mu + k1mu/2) * (u + k1u/2) * ( n2 + 1 / (r + k1h/2) ));
+            k2lam = dr*( (mu + k1mu/2) * (1 - (u + k1u/2)*(u + k1u/2) ) * ( n2*n2 + 1 / ( (r + k1h/2)*(r + k1h/2) ) ) );
+            k2mu = dr*( -(lam + k1lam/2) + 2 * (mu + k1mu/2) * (u + k1u/2) * ( n2 + 1 / (r + k1h/2) ) );
 
-            k3lam = dr*( (mu - k1mu + 2*k2mu) * ( 1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u) )  * ( (n3*n3) + (1 / ( (r - k1h + 2*k2h)*(r - k1h + 2*k2h) ) ) ) );
-            k3mu = dr*( -(lam - k1lam + 2*k2lam) + 2*(mu - k1mu + 2*k2mu)*(u - k1u + 2*k2u) * (n3 + 1 / (r - k1h + 2*k2h)));
+            k3lam = dr*( (mu - k1mu + 2*k2mu) * (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u) )  * ( n3*n3 + 1 / ( (r - k1h + 2*k2h)*(r - k1h + 2*k2h) ) ) );
+            k3mu = dr*( -(lam - k1lam + 2*k2lam) + 2 * (mu - k1mu + 2*k2mu) * (u - k1u + 2*k2u) * (n3 + 1 / (r - k1h + 2*k2h) ) );
         }
 
         // Evaluate gradients for upper and lower refractivity values
         //-----------------------------------------------------------
 
-        dn0 = mu*(pow(u,2)-1)*dw0_1;
-        dn1 = mu*(pow(u,2)-1)*dw1_1;
+        dn0 = mu*(u*u - 1)*dw0_1;
+        dn1 = mu*(u*u - 1)*dw1_1;
 
         if (index_n != nullptr && dn_adj != nullptr)
         {
@@ -285,29 +285,6 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
         // Update respective refractivity values using gradient descent
         //-------------------------------------------------------------
 
-        m0 = beta1*m0 + (1.0-beta1)*dn0;
-        m1 = beta1*m1 + (1.0-beta1)*dn1;
-
-        v0 = beta2*v0 + (1.0-beta2)*pow(dn0, 2);
-        v1 = beta2*v1 + (1-beta2)*pow(dn1, 2);
-
-        m_est0 = m0 / (1.0 - pow(beta1, (iter+1)));
-        m_est1 = m1 / (1.0 - pow(beta1, (iter+1)));
-
-        v_est0 = v0 / (1.0 - pow(beta2, (iter+1)));
-        v_est1 = v1 / (1.0 - pow(beta2, (iter+1)));
-
-        //if (index_n == nullptr && dn_adj == nullptr)
-        //{
-
-            n[i_lev1 - 1 - n_h.begin()] = n[i_lev1 - 1 - n_h.begin()]*(1.0-gamma) + gamma*std::minmax(n[i_lev1 - 1 - n_h.begin()] - lrate*dn0, 0.0).second;
-            n[i_lev1 - n_h.begin()] = n[i_lev1 - n_h.begin()]*(1.0-gamma) + gamma*std::minmax(n[i_lev1 - n_h.begin()] - lrate*dn1, 0.0).second;
-            //n[i_lev1 - 1 - n_h.begin()] -= lrate*m_est0 / (sqrt(v_est0) + epsilon);
-            //n[i_lev1 - n_h.begin()] -= lrate*m_est1 / (sqrt(v_est1) + epsilon);
-            n[0] = n_init;
-
-        //}
-
 
         u_i = u;
 
@@ -323,6 +300,33 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
         {
             break;
         }
+
+        if (index_n == nullptr && dn_adj == nullptr)
+        {      
+            m[i_lev1 - 1 - n_h.begin()] = beta1*m[i_lev1 - 1 - n_h.begin()] + (1.0-beta1)*dn0;
+            m[i_lev1 - n_h.begin()] = beta1*m[i_lev1 - n_h.begin()] + (1.0-beta1)*dn1;
+
+            v[i_lev1 - 1 - n_h.begin()] = beta2*v[i_lev1 - 1 - n_h.begin()] + (1.0-beta2)*(dn0*dn0);
+            v[i_lev1 - n_h.begin()] = beta2*v[i_lev1 - n_h.begin()] + (1.0-beta2)*(dn1*dn1);
+
+            m_est0 = m[i_lev1 - 1 - n_h.begin()] / (1.0 - pow(beta1, (iter+1)));
+            m_est1 = m[i_lev1 - n_h.begin()] / (1.0 - pow(beta1, (iter+1)));
+
+            v_est0 = v[i_lev1 - 1 - n_h.begin()] / (1.0 - pow(beta2, (iter+1)));
+            v_est1 = v[i_lev1 - n_h.begin()] / (1.0 - pow(beta2, (iter+1)));
+
+            //n[i_lev1 - 1 - n_h.begin()] = n[i_lev1 - 1 - n_h.begin()]*(1.0-gamma) + gamma*std::minmax(n[i_lev1 - 1 - n_h.begin()] - lrate*dn0, 0.0).second;
+            //n[i_lev1 - n_h.begin()] = n[i_lev1 - n_h.begin()]*(1.0-gamma) + gamma*std::minmax(n[i_lev1 - n_h.begin()] - lrate*dn1, 0.0).second;
+            
+            n[i_lev1 - 1 - n_h.begin()] -= lrate*m_est0 / (sqrt(v_est0) + epsilon);
+            n[i_lev1 - n_h.begin()] -= lrate*m_est1 / (sqrt(v_est1) + epsilon);
+            
+            n[0] = n_init;
+
+        }
+
+
+        
 
         
     }
