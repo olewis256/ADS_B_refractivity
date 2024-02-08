@@ -15,19 +15,19 @@ std::default_random_engine gen(time(0));
 void progressBackProp(int progress, int total, int width = 50) {
 
     float percentage = (float) progress / total;
-    int barWidth = (int) (percentage * width);
+    int bar = (int) (percentage * width);
 
     std::cout << "[";
 
-    for (int i = 0; i < barWidth; ++i) {
+    for (int i = 0; i < bar; ++i) {
         std::cout << "=";
     }
 
-    for (int i = barWidth; i < width; ++i) {
+    for (int i = bar; i < width; ++i) {
         std::cout << " ";
     }
 
-    std::cout << "] " << std::setw(3) << static_cast<int>(percentage * 100) << "%\r backpropagating... ";
+    std::cout << "] " << std::setw(3) << (int) (percentage * 100) << "%\r backpropagating... ";
     
     std::cout.flush();
 }
@@ -38,7 +38,7 @@ class Adjoint
     private:
 
         std::vector<double> h, u, d;
-        std::vector<double> n_optim, n_optim_h;
+        std::vector<double> n_optim, n_optim_h, ndry;
 
         double s, t;
         double u_i;
@@ -70,9 +70,9 @@ class Adjoint
 
     public:
 
-        Adjoint(const std::vector<double>& h0, const std::vector<double>& u0, const std::vector<double>& dmax, std::vector<double>& n, std::vector<double>& n_h)
+        Adjoint(const std::vector<double>& h0, const std::vector<double>& u0, const std::vector<double>& dmax, std::vector<double>& n, std::vector<double>& ndry, std::vector<double>& n_h)
 
-        : h(h0), u(u0), d(dmax), size(h.size()), n_optim(n), n_optim_h(n_h)
+        : h(h0), u(u0), d(dmax), size(h.size()), n_optim(n), n_optim_h(n_h), ndry(ndry)
         {}
 
         std::vector<double> retrieve(double obs_height, int n_iter, double lrate, double dr);
@@ -131,26 +131,29 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
     std::normal_distribution<double> distribution (0.0,noise);
 
+    for (int k(0); k < size; k++)
+    {
+        target_pos.push_back(tracer.trace(obs_height, u[k], d[k], dr, n_target, n_optim_h)[0]);
+    }
+
     if (noise > 0.0)
     {   
 
         std::cout << "Noise added" << std::endl;
 
         std::ostringstream filenoise;
-        filenoise << "PAPERII_noise_NE_RK3_NEW_" << noise << ".txt";
+        filenoise << "../Noise/PAPERII_noise_NE_RK3_NEW_" << noise << ".txt";
         std::ofstream rfilenoise(filenoise.str());
 
         for(int k(0); k < size; k++)
         {
             perturb = distribution(gen);
 
-            target_pos.push_back(tracer.trace(obs_height, u[k], d[k], dr, n_target, n_optim_h)[0]);
-
             AoA = asin(u[k]);
             AoA += perturb*PI/180.0;
             u[k] = sin(AoA);
 
-            rfilenoise << perturb*180.0/PI << std::endl; 
+            rfilenoise << perturb << std::endl; 
 
         }
 
@@ -162,22 +165,17 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
         std::cerr << "Noise should be above or equal to 0.0 \n";
     }
 
-    else
-    {
-        for(int k(0); k < size; k++)
-        {
-
-            target_pos.push_back(tracer.trace(obs_height, u[k], d[k], dr, n_target, n_optim_h)[0]);
-
-        }
-
-    }
-
     std::vector<double> m(n_optim.size(), 0.0);
     std::vector<double> v(n_optim.size(), 0.0);
 
+    std::ostringstream filerms;
+    filerms << "../RMS/PAPERII_RMS_NE_RK3_NEW_" << noise << ".txt";
+    std::ofstream rfilerms(filerms.str());
+
     for (int i(0); i < n_iter; i++)
     {   
+
+        //lrate = lrate + (0.5e-9 - lrate)*1.0*i/n_iter;
 
         loss = 0.0;
         n_rms = 0.0;
@@ -205,23 +203,20 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
             u_end = -init_pos[1];
             d_end = init_pos[2];
 
-            tracer.backprop(h_end, u_end, d_end, dr, n_optim, n_target[0], n_optim_h, lam, mu, lrate, i, m, v);
+            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_target[0], n_optim_h, lam, mu, lrate, i, m, v);
         
 
         }
 
         
 
-        std::cout << "\n " << "iteration: " << i << ' ' << "loss: " << loss << " RMS N: " << sqrt(n_rms / n_optim.size()) << "\n" << std::endl;;            
-
+        std::cout << "\n " << "iteration: " << (i+1) << ' ' << "loss: " << loss << " RMS N: " << sqrt(n_rms / n_optim.size()) << "\n" << std::endl;;            
+        rfilerms << i << ' ' << loss << ' ' << sqrt(n_rms / n_optim.size()) << std::endl;
     }
 
-    
-
-
+    rfilerms.close();
 
     return n_optim;
-
 
 };
 
