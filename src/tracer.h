@@ -24,6 +24,10 @@ class Tracer
 
         double dn0, dn1;
 
+        //-----------------------
+        // Runge Kutta gradients
+        //-----------------------
+
         double n1, n2, n3;
         double k1h, k2h, k3h;
         double k1u, k2u, k3u;
@@ -32,21 +36,20 @@ class Tracer
 
         std::vector<double>::iterator i_lev1, i_lev2, i_lev3;
 
-        const double gamma = 0.99;
+        const double gamma = 0.1;
 
         std::vector<double> final_pos;
         std::vector<std::vector<double>> paths;
 
         double h_obs;
 
-        //-----------------------
-        // Adam optimisier stuff
-        //-----------------------
+        //---------------------------------
+        // Adam optimisier hyperparameters
+        //---------------------------------
 
-        double eta = 0.01;
-        double beta1 = 0.9;
-        double beta2 = 0.999;
-        double epsilon = 1e-8;
+        const double beta1 = 0.9;
+        const double beta2 = 0.999;
+        const double epsilon = 1e-8;
         double m_est0 = 0.0;
         double m_est1 = 0.0;
         double v_est0 = 0.0;
@@ -54,13 +57,11 @@ class Tracer
        
     public:
 
-        std::vector<double> update_n;
-
         std::vector<double> trace(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward);
 
         std::vector<std::vector<double>> trace_paths(double h0, double u0, double d, double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward);
 
-        void backprop(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, const double n_surface_true, std::vector<double>& n_h,
+        void backprop(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, std::vector<double>& ndry, const double n_surface_true, std::vector<double>& n_h,
                       const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v, int* index_n = nullptr, double* dn_adj = nullptr, double* obs_height = nullptr);
 
 
@@ -144,7 +145,7 @@ std::vector<double> Tracer::trace(const double h0, const double u0, const double
 
 }
 
-void Tracer::backprop(const double h0, const double u0, const double dmax, const double dr, std::vector<double>& n, const double n_init, std::vector<double>& n_h,
+void Tracer::backprop(const double h0, const double u0, const double dmax, const double dr, std::vector<double>& n, std::vector<double>& ndry, const double n_init, std::vector<double>& n_h,
                       const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v, int* index_n, double* dn_adj, double* obs_height)
 
 // -----------------------------------------------------------------------------------------------------
@@ -280,8 +281,6 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
 
         }
 
-        //std::cout << n_h[i_lev1 - n_h.begin()] << ' ' << h << ' ' <<  n_h[i_lev1 - 1 - n_h.begin()] << std::endl;
-
         // Update respective refractivity values using gradient descent
         //-------------------------------------------------------------
 
@@ -303,6 +302,12 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
 
         if (index_n == nullptr && dn_adj == nullptr)
         {      
+
+            //------------------
+            //  Adam optimiser
+            //------------------
+
+
             m[i_lev1 - 1 - n_h.begin()] = beta1*m[i_lev1 - 1 - n_h.begin()] + (1.0-beta1)*dn0;
             m[i_lev1 - n_h.begin()] = beta1*m[i_lev1 - n_h.begin()] + (1.0-beta1)*dn1;
 
@@ -315,13 +320,20 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
             v_est0 = v[i_lev1 - 1 - n_h.begin()] / (1.0 - pow(beta2, (iter+1)));
             v_est1 = v[i_lev1 - n_h.begin()] / (1.0 - pow(beta2, (iter+1)));
 
-            //n[i_lev1 - 1 - n_h.begin()] = n[i_lev1 - 1 - n_h.begin()]*(1.0-gamma) + gamma*std::minmax(n[i_lev1 - 1 - n_h.begin()] - lrate*dn0, 0.0).second;
-            //n[i_lev1 - n_h.begin()] = n[i_lev1 - n_h.begin()]*(1.0-gamma) + gamma*std::minmax(n[i_lev1 - n_h.begin()] - lrate*dn1, 0.0).second;
-            
             n[i_lev1 - 1 - n_h.begin()] -= lrate*m_est0 / (sqrt(v_est0) + epsilon);
             n[i_lev1 - n_h.begin()] -= lrate*m_est1 / (sqrt(v_est1) + epsilon);
+
+            if( h > 0)
+            {
+                if (n[i_lev1 - 1 - n_h.begin()] < ndry[i_lev1 - 1 - n_h.begin()]) { n[i_lev1 - 1 - n_h.begin()] = ndry[i_lev1 - 1 - n_h.begin()]; }
+
+                if (n[i_lev1 - n_h.begin()] < ndry[i_lev1 - n_h.begin()]) { n[i_lev1 - n_h.begin()] = ndry[i_lev1 - n_h.begin()]; }
+
+                //n[i_lev1 - n_h.begin()] = ndry[i_lev1 - n_h.begin()];
+                //n[i_lev1 - 1 - n_h.begin()] = ndry[i_lev1 - 1 - n_h.begin()];
+            }
             
-            n[0] = n_init;
+            n[0] = n_init; // Clamp surface refractivity
 
         }
 
@@ -413,5 +425,6 @@ std::vector<std::vector<double>> Tracer::trace_paths(double h0, double u0, doubl
     return paths;
 
 }
+
 
 #endif

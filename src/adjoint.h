@@ -149,8 +149,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
         {
             perturb = distribution(gen);
 
-            AoA = asin(u[k]);
-            AoA += perturb*PI/180.0;
+            AoA = asin(u[k]) + perturb*PI/180.0;
             u[k] = sin(AoA);
 
             rfilenoise << perturb << std::endl; 
@@ -168,6 +167,8 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
     std::vector<double> m(n_optim.size(), 0.0);
     std::vector<double> v(n_optim.size(), 0.0);
 
+    std::vector<double> cost_track(n_iter, 0.0);
+
     std::ostringstream filerms;
     filerms << "../RMS/PAPERII_RMS_NE_RK3_NEW_" << noise << ".txt";
     std::ofstream rfilerms(filerms.str());
@@ -175,15 +176,16 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
     for (int i(0); i < n_iter; i++)
     {   
 
-        //lrate = lrate + (0.5e-9 - lrate)*1.0*i/n_iter;
-
         loss = 0.0;
         n_rms = 0.0;
         for (int jj(0); jj < size; jj++)
         {
             loss += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - target_pos[jj]), 2);
         }
+        cost_track.push_back(loss);
+        
 
+        
         for (int jjj(0); jjj < n_optim.size(); jjj++)
         {
             n_rms += pow((exp(n_optim[jjj]) - exp(n_target[jjj]))*1e6, 2);

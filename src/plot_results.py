@@ -1,18 +1,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import smplotlib
 
-data = np.genfromtxt("PAPERII_retrieve_NE_RK3_NEW_0.00.txt")
+data = np.genfromtxt("../Retrievals/PAPERII_retrieve_NE_RK3_NEW_0.01.txt")
 
 Noptim = data[:,0]
 h = data[:,1]
 Ntarget = data[:,2]
 Ninit = data[:,3]
 
-plt.plot(Noptim, h)
-plt.plot(Ninit, h, linestyle="--")
-plt.plot(Ntarget, h, color='black')
-plt.show()
+plt.plot(Noptim, h, color='green', label='retrieved')
+plt.plot(Ninit, h, linestyle="--", label='initial')
+plt.plot(Ntarget, h, color='black', label='radiosonde')
 
+plt.xlabel("Refractivity")
+plt.ylabel("Altitude (km)")
+
+plt.legend()
+plt.savefig("../Plots/PAPERII_retrieve_NE_RK3_NEW_0.01_PROFILE.jpeg")
 # data2 = np.genfromtxt("PAPERII_paths2.txt")
 # data3 = np.genfromtxt("PAPERII_paths1.txt")
 # s = data2[:,0][1:3003]

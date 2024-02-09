@@ -136,8 +136,20 @@ void ADSB::process()
 
     }
 
+    // while (inputFile >> obsaoa >> repaoa >> h >> d && (sin_obsAOA_input.size() < length))
+    // {
+    //     //obsAOA_input.push_back(obsaoa);
+    //     sin_obsAOA_input.push_back(sin(obsaoa*pi/180.0));
+    //     rH_input.push_back(h);
+    //     rD_input.push_back(d);
+    //     repAOA_input.push_back(repaoa);
+    //     //azim_input.push_back(azi);
+    //     //time_input.push_back(t);
+
+    // }
+
     inputFile.close();
-}
+} 
 
 const std::vector<double>& ADSB::obsAoA() const {
     return obsAOA_input;
