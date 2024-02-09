@@ -11,7 +11,7 @@
 
 #include "../externals/spline.h"
 
-double n_lev = 35;
+double n_lev = 30;
 
 std::vector<double> n_h(n_lev, 0);
 std::vector<double> logn(n_lev, 0);
@@ -53,7 +53,7 @@ int main()
         n_h[i] = OBSERVER_H + exp(2.7*i/n_lev) - 1.0;
 
         logn[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8)/1e6);
-        logndry[i] = log(1.000 + interp_ndry(n_h[i])/1e6);//log(1.000 + interp_ndry(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8.0)/1e6);
+        logndry[i] = 0.0;//log(1.000 + interp_ndry(n_h[i])/1e6);//log(1.000 + interp_ndry(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8.0)/1e6);
         //logndry[i] = log(1.000 + interp_ndry(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8.0)/1e6);
         logn_init[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8)/1e6);
 
@@ -65,9 +65,9 @@ int main()
 
     // Tracing and learning parameters
     double dr = 0.1;
-    double learn_rate = 1e-9;
-    int iterations = 10;
-    double noise_std = 0.05;//05;//06;//0.01;//0.01;//0.0075;//0.000000000033;
+    double learn_rate = 0.5e-11;
+    int iterations = 40;
+    double noise_std = 0.03;
 
     std::vector<double> retrieval = Profile.retrieve_synthetic(OBSERVER_H, iterations, learn_rate, dr, logn_target, noise_std);
 

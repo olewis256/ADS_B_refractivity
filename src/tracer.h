@@ -36,7 +36,7 @@ class Tracer
 
         std::vector<double>::iterator i_lev1, i_lev2, i_lev3;
 
-        const double gamma = 0.1;
+        const double gamma = 0.8;
 
         std::vector<double> final_pos;
         std::vector<std::vector<double>> paths;
@@ -308,20 +308,23 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
             //------------------
 
 
-            m[i_lev1 - 1 - n_h.begin()] = beta1*m[i_lev1 - 1 - n_h.begin()] + (1.0-beta1)*dn0;
-            m[i_lev1 - n_h.begin()] = beta1*m[i_lev1 - n_h.begin()] + (1.0-beta1)*dn1;
+            // m[i_lev1 - 1 - n_h.begin()] = beta1*m[i_lev1 - 1 - n_h.begin()] + (1.0-beta1)*dn0;
+            // m[i_lev1 - n_h.begin()] = beta1*m[i_lev1 - n_h.begin()] + (1.0-beta1)*dn1;
 
-            v[i_lev1 - 1 - n_h.begin()] = beta2*v[i_lev1 - 1 - n_h.begin()] + (1.0-beta2)*(dn0*dn0);
-            v[i_lev1 - n_h.begin()] = beta2*v[i_lev1 - n_h.begin()] + (1.0-beta2)*(dn1*dn1);
+            // v[i_lev1 - 1 - n_h.begin()] = beta2*v[i_lev1 - 1 - n_h.begin()] + (1.0-beta2)*(dn0*dn0);
+            // v[i_lev1 - n_h.begin()] = beta2*v[i_lev1 - n_h.begin()] + (1.0-beta2)*(dn1*dn1);
 
-            m_est0 = m[i_lev1 - 1 - n_h.begin()] / (1.0 - pow(beta1, (iter+1)));
-            m_est1 = m[i_lev1 - n_h.begin()] / (1.0 - pow(beta1, (iter+1)));
+            // m_est0 = m[i_lev1 - 1 - n_h.begin()] / (1.0 - pow(beta1, (iter+1)));
+            // m_est1 = m[i_lev1 - n_h.begin()] / (1.0 - pow(beta1, (iter+1)));
 
-            v_est0 = v[i_lev1 - 1 - n_h.begin()] / (1.0 - pow(beta2, (iter+1)));
-            v_est1 = v[i_lev1 - n_h.begin()] / (1.0 - pow(beta2, (iter+1)));
+            // v_est0 = v[i_lev1 - 1 - n_h.begin()] / (1.0 - pow(beta2, (iter+1)));
+            // v_est1 = v[i_lev1 - n_h.begin()] / (1.0 - pow(beta2, (iter+1)));
 
-            n[i_lev1 - 1 - n_h.begin()] -= lrate*m_est0 / (sqrt(v_est0) + epsilon);
-            n[i_lev1 - n_h.begin()] -= lrate*m_est1 / (sqrt(v_est1) + epsilon);
+            // n[i_lev1 - 1 - n_h.begin()] = n[i_lev1 - 1 - n_h.begin()] - lrate*m_est0 / sqrt(v_est0 + epsilon);
+            // n[i_lev1 - n_h.begin()] = n[i_lev1 - n_h.begin()] - lrate*m_est1 / sqrt(v_est1 + epsilon);
+
+            n[i_lev1 - 1 - n_h.begin()] = n[i_lev1 - 1 - n_h.begin()]*(1.0 - gamma) + gamma*std::max(n[i_lev1 - 1 - n_h.begin()] - lrate*dn0, 0.0);
+            n[i_lev1 - n_h.begin()] = n[i_lev1 - n_h.begin()]*(1.0 - gamma) + gamma*std::max(n[i_lev1 - n_h.begin()] - lrate*dn1, 0.0);
 
             if( h > 0)
             {
