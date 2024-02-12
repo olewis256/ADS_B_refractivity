@@ -65,8 +65,8 @@ int main()
 
     // Tracing and learning parameters
     double dr = 0.1;
-    double learn_rate = 0.5e-11;
-    int iterations = 40;
+    double learn_rate =1e-9;
+    int iterations =30;
     double noise_std = 0.03;
 
     std::vector<double> retrieval = Profile.retrieve_synthetic(OBSERVER_H, iterations, learn_rate, dr, logn_target, noise_std);
