@@ -7,15 +7,16 @@
 #include <thread>
 #include <chrono>
 #include <random>
+#include <algorithm>
 
 #include "tracer.h"
 
 std::default_random_engine gen(time(0));
 
-void progressBackProp(int progress, int total, int width = 50) {
+void progressBackProp(int prog, int tot, int width = 50) {
 
-    float percentage = (float) progress / total;
-    int bar = (int) (percentage * width);
+    float percent = (float) prog / tot;
+    int bar = (int) (percent * width);
 
     std::cout << "[";
 
@@ -27,7 +28,7 @@ void progressBackProp(int progress, int total, int width = 50) {
         std::cout << " ";
     }
 
-    std::cout << "] " << std::setw(3) << (int) (percentage * 100) << "%\r backpropagating... ";
+    std::cout << "] " << std::setw(3) << (int) (percent * 100) << "%\r backpropagating... ";
     
     std::cout.flush();
 }
@@ -35,6 +36,28 @@ void progressBackProp(int progress, int total, int width = 50) {
 
 class Adjoint
 {
+
+    //-----------------------------------------------------------------------------------------------------------------------
+    //
+    // Adjoint class.  Contains function algorithms for retrieving refractivity profiles using raw ADS-B observations.  
+    // During each iteration in range n_iter, all observations are simulated using the observed AoA and known position of the
+    // aircraft.  The loss function is evaluated using tracer.trace and backpropagated through the refractivity
+    // field using tracer.backprop for each individual ray. The gradients of the loss function with respect to
+    // each refractivity value in n is accumulated and then n updated using gradient descent.  The retrieval is
+    // terminated after n_iter iterations.
+    //
+    // Each function has slight variations:
+    //  +  .retrieve                   : retrieves refractivity profiles using raw ADS-B observations
+    //  +  .retrieve_synthetic         : retrieves refractivity profiles using synthetic observations (input n field)
+    //  +  .retrieve_paths             : initial and retrieved flightpaths and retrieved n field using raw ADS-B obs.
+    //
+    // Common inputs:
+    //  +  obs_height                  : height of observer (initial height of ray)  
+    //  +  n_iter                      : number of iterations to run the retrieval algorithm
+    //  +  lrate                       : learning rate - controls speed of convergence (careful!)
+    //
+    //------------------------------------------------------------------------------------------------------------------------
+
     private:
 
         std::vector<double> h, u, d;
@@ -50,7 +73,6 @@ class Adjoint
         double h_target;
 
         std::vector<double> pos;
-
         std::vector<double> init_pos;
         std::vector<double> target_pos;
 
@@ -70,46 +92,66 @@ class Adjoint
 
     public:
 
-        Adjoint(const std::vector<double>& h0, const std::vector<double>& u0, const std::vector<double>& dmax, std::vector<double>& n, std::vector<double>& ndry, std::vector<double>& n_h)
+        //-------------------
+        // Defining functions
+        //--------------------
+
+        Tracer tracer;
+
+        Adjoint(const std::vector<double>& h0, const std::vector<double>& u0, const std::vector<double>& dmax,
+                std::vector<double>& n, std::vector<double>& ndry, std::vector<double>& n_h)
 
         : h(h0), u(u0), d(dmax), size(h.size()), n_optim(n), n_optim_h(n_h), ndry(ndry)
         {}
 
         std::vector<double> retrieve(double obs_height, int n_iter, double lrate, double dr);
+
         std::vector<double> retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target, double noise);
+
+        std::vector<std::vector<double>> retrieve_paths(double obs_height, int n_iter, double lrate, double dr);
 
 
 };
 
 std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrate, double dr)
+
 {   
 
-    Tracer tracer;
+    std::vector<double> cost_track(n_iter, 0.0);
+    std::vector<double> m(n_optim.size(), 0.0);
+    std::vector<double> v(n_optim.size(), 0.0);
 
     for (int i(0); i < n_iter; i++)
     {   
      
         loss = 0.0;
 
+        for (int jj(0); jj < size; jj++)
+        {
+            loss += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - h[jj]), 2);
+        }
+        cost_track[i] = loss;
+
         for (int j(0); j < size; j++)
         {
 
-            init_pos = tracer.trace(obs_height, u[j], d[j], dr, n_optim, n_optim_h);
+            progressBackProp(j, size);
 
-            loss += pow((init_pos[0] - h[j]), 2);
+            init_pos = tracer.trace(obs_height, u[j], d[j], dr, n_optim, n_optim_h);
 
             lam = 2*(init_pos[0] - h[j]);
             mu = 0.0;
 
             h_end = init_pos[0];
-            u_end = -init_pos[1];
+            u_end = -init_pos[1]; // reverse end direction of ray to initialise reverse pass
             d_end = init_pos[2];
+
+            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m ,v);        
 
         }
 
-        //n_optim = trace.backprop(h_end, u_end, d_end, dr, n_optim, n_optim, n_optim_h, lam, mu, i, lrate);        
 
-        std::cout << "\n " << loss << std::endl;
+        std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss << "\n" << std::endl;
 
     }
 
@@ -120,8 +162,6 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
 
 std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target, double noise)
 {   
-
-    Tracer tracer;
 
     std::cout << "Noise standard deviation: " << noise << "\n";
 
@@ -142,19 +182,26 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
         std::cout << "Noise added" << std::endl;
 
         std::ostringstream filenoise;
-        filenoise << "../Noise/PAPERII_noise_NE_RK3_NEW_" << noise << ".txt";
+        filenoise << "../Noise/PAPERII_noise_NE_RK3_" << noise << ".txt";
         std::ofstream rfilenoise(filenoise.str());
+
+       double  AoArms = 0.0;
 
         for(int k(0); k < size; k++)
         {
             perturb = distribution(gen);
 
             AoA = asin(u[k]) + perturb*PI/180.0;
+
+            AoArms += pow((asin(u[k]) - AoA)*180.0/PI, 2);
+
             u[k] = sin(AoA);
 
             rfilenoise << perturb << std::endl; 
 
         }
+
+        std::cout << "AoA RMS: " << sqrt(AoArms/size) << std::endl;
 
         rfilenoise.close();
 
@@ -170,7 +217,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
     std::vector<double> cost_track(n_iter, 0.0);
 
     std::ostringstream filerms;
-    filerms << "../RMS/PAPERII_RMS_NE_RK3_NEW_" << noise << ".txt";
+    filerms << "../RMS/PAPERII_RMS_NE_RK3_" << noise << ".txt";
     std::ofstream rfilerms(filerms.str());
 
     for (int i(0); i < n_iter; i++)
@@ -182,10 +229,9 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
         {
             loss += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - target_pos[jj]), 2);
         }
-        cost_track.push_back(loss);
-        
+        cost_track[i] = loss;
+    
 
-        
         for (int jjj(0); jjj < n_optim.size(); jjj++)
         {
             n_rms += pow((exp(n_optim[jjj]) - exp(n_target[jjj]))*1e6, 2);
@@ -219,6 +265,70 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
     rfilerms.close();
 
     return n_optim;
+
+};
+
+std::vector<std::vector<double>> Adjoint::retrieve_paths(double obs_height, int n_iter, double lrate, double dr)
+{   
+
+    
+
+    std::vector<double> flight_height0(size, 0.0);
+    std::vector<double> flight_height1(size, 0.0);
+
+    std::vector<double> m(n_optim.size(), 0.0);
+    std::vector<double> v(n_optim.size(), 0.0);
+
+    // Initial flight paths
+    //-----------------------
+
+    for (int jj(0); jj < size; jj++)
+    {
+        flight_height0[jj] = tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0];
+    }
+
+    for (int i(0); i < n_iter; i++)
+    {   
+     
+        loss = 0.0;
+
+        for (int jj(0); jj < size; jj++)
+        {
+            loss += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - h[jj]), 2);
+        }
+
+        for (int j(0); j < size; j++)
+        {
+
+            progressBackProp(j, size);
+
+            init_pos = tracer.trace(obs_height, u[j], d[j], dr, n_optim, n_optim_h);
+
+            lam = 2*(init_pos[0] - h[j]);
+            mu = 0.0;
+
+            h_end = init_pos[0];
+            u_end = -init_pos[1];
+            d_end = init_pos[2];
+
+            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m, v);    
+            
+        }    
+
+        std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss << "\n" << std::endl;
+
+    }
+
+    // Retrieved flight paths
+    //-----------------------
+
+    for (int jj(0); jj < size; jj++)
+    {
+        flight_height1[jj] = tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0];
+    }
+
+    return {flight_height0, flight_height1, n_optim};
+
 
 };
 

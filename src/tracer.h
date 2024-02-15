@@ -24,6 +24,13 @@ class Tracer
 
         double dn0, dn1;
 
+        std::vector<double>::iterator i_lev1, i_lev2, i_lev3;
+
+        std::vector<double> final_pos;
+        std::vector<std::vector<double>> paths;
+
+        double h_obs;
+
         //-----------------------
         // Runge Kutta gradients
         //-----------------------
@@ -34,13 +41,6 @@ class Tracer
         double k1lam, k2lam, k3lam;
         double k1mu, k2mu, k3mu;
 
-        std::vector<double>::iterator i_lev1, i_lev2, i_lev3;
-
-        std::vector<double> final_pos;
-        std::vector<std::vector<double>> paths;
-
-        double h_obs;
-
         //---------------------------------
         // Adam optimisier hyperparameters
         //---------------------------------
@@ -48,29 +48,50 @@ class Tracer
         const double beta1 = 0.9;
         const double beta2 = 0.999;
         const double epsilon = 1e-8;
-        double m0 = 0.0;
-        double m1 = 0.0;
-        double v0 = 0.0;
-        double v1 = 0.0;
-        double m_est0 = 0.0;
-        double m_est1 = 0.0;
-        double v_est0 = 0.0;
-        double v_est1 = 0.0;
+
+        double m_est = 0.0;
+        double v_est = 0.0;
+
        
     public:
+
+        //-------------------
+        // Defining functions
+        //--------------------
 
         std::vector<double> trace(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward);
 
         std::vector<std::vector<double>> trace_paths(double h0, double u0, double d, double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward);
 
-        void backprop(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, std::vector<double>& ndry, const double n_surface_true, std::vector<double>& n_h,
-                      const double lam0, const double mu0, const double lrate, int iter, int* index_n = nullptr, double* dn_adj = nullptr, double* obs_height = nullptr);
+        void backprop(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, std::vector<double>& ndry, const double n_surface_true,
+                      std::vector<double>& n_h, const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v,
+                      int* index_n = nullptr, double* dn_adj = nullptr, double* obs_height = nullptr);
 
 
 };
 
 std::vector<double> Tracer::trace(const double h0, const double u0, const double dmax, const double dr,
-                                                 std::vector<double>& n, std::vector<double>& n_h, bool forward = true)
+                                  std::vector<double>& n, std::vector<double>& n_h, bool forward = true)
+
+//-------------------------------------------------------------------------------------------------------------
+//
+//  Ray tracing model based on the second-order differential equation (SODE) tracer developed by Zeng. et al
+//  (2014).  The rays equations are integrated using a third-order Runge-Kutta scheme.
+// 
+//  Inputs:
+//  +  h0                 : initial height of ray        
+//  +  u0                 : initial direction of ray 
+//  +  dmax               : initial distance of ray (aircraft distance across surface)
+//  +  dr                 : ray step size
+//  +  (vector) n         : refractive index field 
+//  +  (vector) n_h       : height of refractive index levels
+//  +  forward            : true if forward tracing, false if reverse tracing
+//
+//  Some variables:
+//  +  s                  : distance travelled by ray across surface of Earth
+//
+//-------------------------------------------------------------------------------------------------------------
+
 {
     steps = (int) 600/dr;
 
@@ -148,7 +169,7 @@ std::vector<double> Tracer::trace(const double h0, const double u0, const double
 }
 
 void Tracer::backprop(const double h0, const double u0, const double dmax, const double dr, std::vector<double>& n, std::vector<double>& ndry, const double n_init, std::vector<double>& n_h,
-                      const double lam0, const double mu0, const double lrate, int iter, int* index_n, double* dn_adj, double* obs_height)
+                      const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v, int* index_n, double* dn_adj, double* obs_height)
 
 // -----------------------------------------------------------------------------------------------------
 //
@@ -178,12 +199,15 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
 //  +  lam0               : initial adjoint associated with h
 //  +  mu0                : initial adjoint associated with u
 //  +  lrate              : learning rate - controls who far along gradient direction to go (careful!)
+//  +  m & v              : first and second moments used in the psuedo-adam optimiser
 //
 // Some variables:
 //  + dw0, etc            : the gradient of the weight used in the linear interpolation scheme. E.g. 
 //                          n_eval = N0*(y1 - y)/(y1 - y0) + N1*(y - y0)/(y1 - y0), there
 //                          dndh_eval = N0 * -1/(y1 - y0) + N1 * 1/(y1 - y0)
 //  + k1,2,etc            : used for Runge-Kutta integration, y = y + (k1 + 4*k2 + k3)/6
+//
+//  + s                   : distance across surface travelled by ray
 //
 //------------------------------------------------------------------------------------------------------
 
@@ -204,6 +228,7 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
         h_obs = OBSERVER_H;
     }
 
+    std::vector<double> ngrad((int) n.size(), 0.0);
 
     for(int i(0); i < steps; i++)
     { 
@@ -305,39 +330,32 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
         if (index_n == nullptr && dn_adj == nullptr)
         {      
 
-            //------------------------
-            //  Pseudo-Adam optimiser
-            //------------------------
-
-
-            m0 = beta1*m0 + (1.0-beta1)*dn0;
-            m1 = beta1*m1 + (1.0-beta1)*dn1;
-
-            v0 = beta2*v0 + (1.0-beta2)*(dn0*dn0);
-            v1 = beta2*v1 + (1.0-beta2)*(dn1*dn1);
-
-            m_est0 = m0 / (1.0 - pow(beta1, (iter+1)));
-            m_est1 = m1 / (1.0 - pow(beta1, (iter+1)));
-
-            v_est0 = v0 / (1.0 - pow(beta2, (iter+1)));
-            v_est1 = v1 / (1.0 - pow(beta2, (iter+1)));
-
-            n[i_lev1 - 1 - n_h.begin()] -= lrate*m_est0 / sqrt(v_est0 + epsilon);
-            n[i_lev1 - n_h.begin()] -= lrate*m_est1 / sqrt(v_est1 + epsilon);
+            ngrad[i_lev1 - 1 - n_h.begin()] += dn0;
+            ngrad[i_lev1 - n_h.begin()] += dn1;
             
-            n[0] = n_init; // Clamp surface refractivity
-
-            if(n[i_lev1 - 1 - n_h.begin()] < ndry[i_lev1 - 1 - n_h.begin()]){n[i_lev1 - 1 - n_h.begin()] = ndry[i_lev1 - 1 - n_h.begin()];}
-            if(n[i_lev1 - n_h.begin()] < ndry[i_lev1 - n_h.begin()]){n[i_lev1 - n_h.begin()] = ndry[i_lev1 - n_h.begin()];}
-
-
         }
-
-
-        
-
-        
     }
+
+    for(int i(0); i < (int) n.size(); i++)
+    {
+
+        // Adam optimiser
+        //---------------
+
+        m[i] = beta1*m[i] + (1.0-beta1)*ngrad[i];
+        v[i] = beta2*v[i] + (1.0-beta2)*ngrad[i]*ngrad[i];
+
+        m_est = m[i] / (1.0 - pow(beta1, (iter+1)));
+        v_est = v[i] / (1.0 - pow(beta2, (iter+1)));
+
+        
+        n[i] -= lrate*m_est / sqrt(v_est + epsilon);
+
+        if(n[i] < ndry[i]){n[i] = ndry[i];}
+    }
+
+    n[0] = n_init; // Clamp surface refractivity
+        
 
 };
 
