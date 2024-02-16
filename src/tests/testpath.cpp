@@ -4,12 +4,12 @@
 #include <sstream>
 #include <cstdio>
 
-#include "tracer.h"
-#include "inputs.h"
-#include "adjoint.h"
-#include "constants.h"
+#include "../tracer.h"
+#include "../inputs.h"
+#include "../adjoint.h"
+#include "../constants.h"
 
-#include "spline.h"
+#include "../../externals/spline.h"
 
 int n_lev = 120;
 double h0 = 0.577;
@@ -29,7 +29,7 @@ Tracer rayTracer;
 int main()
 {
 
-    Atmosphere atmosphere_input("Refractivity_data/22Sep_12z_Watnall_profile.txt");
+    Atmosphere atmosphere_input("../../Refractivity_data/22Sep_12z_Watnall_profile.txt");
     atmosphere_input.process();
 
     const std::vector<double>& n_test = atmosphere_input.N();

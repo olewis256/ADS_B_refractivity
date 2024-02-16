@@ -15,6 +15,7 @@ double n_lev = 30;
 
 std::vector<double> n_h(n_lev, 0);
 std::vector<double> logn(n_lev, 0);
+std::vector<double> logndry(n_lev, 0);
 std::vector<double> logn_init(n_lev, 0);
 std::vector<double> logn_target(n_lev, 0);
 
@@ -28,6 +29,7 @@ int main()
     atmosphere_input.process();
 
     const std::vector<double>& N_profile = atmosphere_input.N();
+    const std::vector<double>& NDRY_profile = atmosphere_input.NDRY();
     const std::vector<double>& h_profile = atmosphere_input.H();
 
     // Read in ADS-B data
@@ -43,32 +45,34 @@ int main()
     Tracer rayTracer;
 
     tk::spline interp_n(h_profile,N_profile,tk::spline::cspline,true);
+    tk::spline interp_ndry(h_profile,NDRY_profile,tk::spline::cspline,true);
 
     for(int i(0); i < n_lev; i++)
     {
 
         n_h[i] = OBSERVER_H + exp(2.7*i/n_lev) - 1.0;
 
-        logn[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8.0)/1e6);
-
-        logn_init[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8.0)/1e6);
+        logn[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8)/1e6);
+        logndry[i] = 0.0;//log(1.000 + interp_ndry(n_h[i])/1e6);//log(1.000 + interp_ndry(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8.0)/1e6);
+        //logndry[i] = log(1.000 + interp_ndry(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8.0)/1e6);
+        logn_init[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8)/1e6);
 
         logn_target[i] = log(1.000 + interp_n(n_h[i])/1e6);
 
     }
 
-    Adjoint Profile(h_adsb, u_adsb, d_adsb, logn, n_h);
+    Adjoint Profile(h_adsb, u_adsb, d_adsb, logn, logndry, n_h);
 
     // Tracing and learning parameters
     double dr = 0.1;
-    double learn_rate =2.5e-9;
-    int iterations = 20;
-    double noise_std = 0.0;//0.01;
+    double learn_rate =1e-9;
+    int iterations =30;
+    double noise_std = 0.03;
 
     std::vector<double> retrieval = Profile.retrieve_synthetic(OBSERVER_H, iterations, learn_rate, dr, logn_target, noise_std);
 
     std::ostringstream file;
-    file << "../Retrievals/PAPERII_retrieve_NE_RK3_NEW_0.00.txt";
+    file << "../Retrievals/PAPERII_retrieve_NE_RK3_NEW_" << noise_std << ".txt";
     std::ofstream rfile(file.str());
 
     for(int i(0); i < n_lev; i++)
