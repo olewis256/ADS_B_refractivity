@@ -25,7 +25,7 @@ int main()
 
     // Read in refractivity data
 
-    Atmosphere atmosphere_input("../Refractivity_data/22Sep_12z_Watnall_profile.txt");
+    Atmosphere atmosphere_input("../refractivity/22Sep_12z_Watnall_profile.txt");
     atmosphere_input.process();
 
     const std::vector<double>& N_profile = atmosphere_input.N();
@@ -53,8 +53,7 @@ int main()
         n_h[i] = OBSERVER_H + exp(2.7*i/n_lev) - 1.0;
 
         logn[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8)/1e6);
-        logndry[i] = 0.0;//log(1.000 + interp_ndry(n_h[i])/1e6);//log(1.000 + interp_ndry(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8.0)/1e6);
-        //logndry[i] = log(1.000 + interp_ndry(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8.0)/1e6);
+        logndry[i] = log(1.000 + interp_ndry(n_h[i])/1e6);
         logn_init[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/8)/1e6);
 
         logn_target[i] = log(1.000 + interp_n(n_h[i])/1e6);
@@ -65,9 +64,9 @@ int main()
 
     // Tracing and learning parameters
     double dr = 0.1;
-    double learn_rate =1e-9;
-    int iterations =30;
-    double noise_std = 0.03;
+    double learn_rate =50e-9;
+    int iterations =20;
+    double noise_std = 0.05;
 
     std::vector<double> retrieval = Profile.retrieve_synthetic(OBSERVER_H, iterations, learn_rate, dr, logn_target, noise_std);
 
@@ -82,17 +81,5 @@ int main()
 
     rfile.close();
 
-    std::ostringstream file2;
-    file2 << "../aircraft_dist/Height_distribution.txt";
-    std::ofstream rfile2(file2.str());
-
-    for(int i(0); i < h_adsb.size(); i++)
-    {
-    rfile2 << d_adsb[i] << ' ' << h_adsb[i] << std::endl;
-    }
-
-    rfile2.close();
-
     return 0;
 }
-
