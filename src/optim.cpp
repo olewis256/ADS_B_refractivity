@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
 
         // Read in refractivity data
 
-        Atmosphere atmosphere_input("../refractivity/Sep21_N_14.00_(km)_updated_orog.txt");
+        Atmosphere atmosphere_input("refractivity/Sep21_N_14.00_(km)_updated_orog.txt");
         atmosphere_input.process();
 
         const std::vector<double>& N_profile = atmosphere_input.N();
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 
         // Read in ADS-B data
 
-        std::string adsbfile = "../ADS_B_data/sep_NE_paperII_input_5.000_central5_t" + std::to_string(t) + "_" + std::to_string(t+900) + ".txt";
+        std::string adsbfile = "ADS_B_data/sep_NE_paperII_input_5.000_central5_t" + std::to_string(t) + "_" + std::to_string(t+900) + ".txt";
 
         ADSB adsb_input(adsbfile);
         adsb_input.process();
@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
         {
             input_atmo = "refractivity/15Dec_12z_2022_Watnall_profile_RH.txt";
         }
-        std::cout <<"test";
+        
         Atmosphere atmosphere_input(input_atmo);
         atmosphere_input.process();
 
