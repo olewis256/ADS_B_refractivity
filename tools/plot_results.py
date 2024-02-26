@@ -3,36 +3,56 @@ import matplotlib.pyplot as plt
 import smplotlib
 import sys
 import pandas as pd
+import argparse
 
 r0 = 6364.765
 
 rep = lambda h, d : np.arctan( ((r0+h)*np.cos(d/r0) - (r0+0.527)) / ((r0+h)*np.sin(d/r0))) * 180/np.pi
 
-typeplot = int(sys.argv[1])
+parser = argparse.ArgumentParser(
+                    prog='Refraction plotting',
+                    description='Plotting tools ADS-B interferometer.\nIncludes plotting for real and synthetic data, as well as loss and apparent flightpath statistics.',
+                    epilog='')
 
-if len(sys.argv) == 3:  
-    typeplot2 = int(sys.argv[2])
+parser.add_argument('--index_profile', type=int,
+                    help='Choose number for synthetic retrieved profile\n1: Sep \'23, 2: July \'22, 3: Dec \'22')
 
+parser.add_argument('--difference', action='store_true',
+                    help='Plot percentage difference between retrieved and synthetic profile')
+
+parser.add_argument('--profile', action='store_true',
+                    help='Plot retrieved profile')
+
+parser.add_argument('--loss', action='store_true',
+                    help='Plot loss and RMS statistics')
+
+parser.add_argument('--true', action='store_true',
+                    help='Plot true profile using raw ADS-B observations')
+
+parser.add_argument('--paths', action='store_true',
+                    help='Plot true and retrieved flightpaths')
+
+args = parser.parse_args()
 
 data = [0]*3
 datar = [0]*4
 noises = [0, 0.01, 0.05]
 
-if (typeplot == 1) or (typeplot == 2):
+if (args.index_profile in [1,2,3]):
 
     for i in range(3):
         
-        data[i] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_RK3_{}_{}.txt".format(typeplot2, noises[i]), sep=' ', header=None)
+        data[i] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_RK3_{}_{}.txt".format(args.index_profile, noises[i]), sep=' ', header=None)
         data[i].columns = ["retrieve", "h", "target", "init"]
 
-if (typeplot == 3):
+if (args.loss):
     for i in range(3):
         
         data[i] = pd.read_csv("../RMS/PAPERII_RMS_NE_RK3_{}.txt".format(noises[i]), sep=' ', header=None)
         data[i].columns = ["iter", "loss", "Nrms"]
 
 
-if (typeplot == 4):
+if (args.true and args.profile):
 
     datar[0] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_TRUE_t0_900.txt", sep=' ', header=None)
     datar[1] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_TRUE_t900_1800.txt", sep=' ', header=None)
@@ -64,7 +84,7 @@ if (typeplot == 4):
     
     plt.show()
 
-if (typeplot == 45):
+if (args.paths):
 
     datar[0] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t0_900.txt", sep=' ', header=None)
     datar[1] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t900_1800.txt", sep=' ', header=None)
@@ -145,7 +165,7 @@ if (typeplot == 45):
     
     plt.show()
 
-if (typeplot == 46):
+if (args.true and args.loss):
 
     datar[0] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t0_900.txt", sep=' ', header=None)
     datar[1] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t900_1800.txt", sep=' ', header=None)
@@ -246,7 +266,7 @@ if (typeplot == 46):
     
     plt.show()
 
-if (typeplot == 1):
+if (args.index_profile in [1,2,3] and args.profile):
 
     fig, ax1 = plt.subplots(figsize=(8, 6))
 
@@ -276,7 +296,7 @@ if (typeplot == 1):
 
     plt.show()
 
-if (typeplot == 2):
+if (args.index_profile in [1,2,3] and args.difference):
 
     fig, ax1 = plt.subplots(figsize=(6, 8))
 
@@ -300,7 +320,7 @@ if (typeplot == 2):
 
     plt.show()
 
-if (typeplot == 3):
+if (args.index_profile in [1,2,3] and args.loss):
 
     fig, (ax1, ax2) = plt.subplots(ncols=2,figsize=(10, 6))
 
@@ -328,33 +348,33 @@ if (typeplot == 3):
 
     plt.show()
 
-if(typeplot==6):
+# if(typeplot==6):
 
-    data[0] = pd.read_csv("../flightpaths/PAPERII_synobs_all.txt", sep=' ', header=None)
-    data[0].columns = ["obsAoA", "h", "hm", "d", "t", "repAoA", "azim"]
+#     data[0] = pd.read_csv("../flightpaths/PAPERII_synobs_all.txt", sep=' ', header=None)
+#     data[0].columns = ["obsAoA", "h", "hm", "d", "t", "repAoA", "azim"]
 
-    obsAoA = data[0]['obsAoA']
-    repAoA = data[0]['repAoA']
-    h = data[0]['h']
-    hm = data[0]['hm']
-    t = data[0]['t']
+#     obsAoA = data[0]['obsAoA']
+#     repAoA = data[0]['repAoA']
+#     h = data[0]['h']
+#     hm = data[0]['hm']
+#     t = data[0]['t']
 
-    print(len(h))
+#     print(len(h))
 
-    d = data[0]['d']
-    azim = data[0]['azim']
+#     d = data[0]['d']
+#     azim = data[0]['azim']
 
-    repAoA_sph = np.arctan( ((r0+h)*np.cos(d/r0) - (r0+0.515)) / ((r0+h)*np.sin(d/r0))) * 180/np.pi
-    repAoA_m = np.arctan( ((r0+hm)*np.cos(d/r0) - (r0+0.515)) / ((r0+hm)*np.sin(d/r0))) * 180/np.pi
+#     repAoA_sph = np.arctan( ((r0+h)*np.cos(d/r0) - (r0+0.515)) / ((r0+h)*np.sin(d/r0))) * 180/np.pi
+#     repAoA_m = np.arctan( ((r0+hm)*np.cos(d/r0) - (r0+0.515)) / ((r0+hm)*np.sin(d/r0))) * 180/np.pi
 
-    fig, ax1 = plt.subplots(figsize=(8, 6))
+#     fig, ax1 = plt.subplots(figsize=(8, 6))
 
-    o_m = repAoA - repAoA_m
+#     o_m = repAoA - repAoA_m
 
-    ax1.scatter(repAoA-repAoA_m, obsAoA, s=1.5,c=t, edgecolors="none")
-    ax1.set_ylabel("Observed AoA (deg.)")
-    ax1.set_xlabel("(O - M) refracted angle (deg.)")
-    ax1.set_xlim(-0.5, 0.5)
-    plt.axvline(0, linestyle='--')
-    plt.savefig("../plots/test.jpeg")
+#     ax1.scatter(repAoA-repAoA_m, obsAoA, s=1.5,c=t, edgecolors="none")
+#     ax1.set_ylabel("Observed AoA (deg.)")
+#     ax1.set_xlabel("(O - M) refracted angle (deg.)")
+#     ax1.set_xlim(-0.5, 0.5)
+#     plt.axvline(0, linestyle='--')
+#     plt.savefig("../plots/test.jpeg")
 
