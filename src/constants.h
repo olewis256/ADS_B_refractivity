@@ -3,8 +3,7 @@
 
 #include <cmath>
 
-#define EARTH_R 6364.539
+#define EARTH_R 6364.756
 #define PI acos(-1)
-#define OBSERVER_H 0.577
-
+#define OBSERVER_H 0.527
 #endif

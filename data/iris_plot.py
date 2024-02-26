@@ -54,124 +54,154 @@ Nw = 3.73e5*e/T**2
 
 N = Nd + Nw
 
-t = 16
+t = 14
 
 lat_Clee = 52.39687345348266
 lon_Clee = -2.594612181110821
+
+xc, yc = np.meshgrid([lon_Clee], [lat_Clee])
+
+lonc, latc = iris.analysis.cartography.rotate_pole(xc, yc, 177.5, 37.5)
+xc, yc = iris.analysis.cartography.unrotate_pole(lonc, latc, 177.5, 37.5)
+
+print(xc, yc)
 
 glat = cube0.coord('grid_latitude').points
 glon = cube0.coord('grid_longitude').points
 
 x, y = np.meshgrid(glon, glat)
 
-lons, lats = iris.analysis.cartography.unrotate_pole(x, y, 177.5, 37.5)
-
-point = (lon_Clee, lat_Clee)
-
-dist = np.sqrt((lons - point[0])**2 + (lats - point[1])**2)
-
-min_index = np.unravel_index(np.argmin(dist, axis=None), dist.shape)
-
-xlon = min_index[0]
-xlat = min_index[1]
-
-print(cube0.coord('level_height').points)
-
-choice = 0
-
-if(choice == 1):
-
-    for i in range(62):
-        
-        cube0.coord('level_height').points[i] += h[xlat][xlon].data * (1.0 - (cube0.coord('level_height').points[i]/40e3) / 0.4338236) ** 2
-
-    plt.plot(N[t,:,xlat,xlon], cube0.coord('level_height').points)
-    plt.show()
-
-    full_array = np.stack([cube0.coord('level_height').points, N[t,:,xlat,xlon], Nd[t,:,xlat,xlon], Nw[t,:,xlat,xlon]], axis=1)
-
-    np.savetxt("../Refractivity_data/Sep21_N_{}.00_(km)_updated_orog.txt".format(t), full_array, delimiter=" ")
-
-else:
-
-    direction = 45
-
-    lonp = [lons[xlon][xlat]]
-    latp = [lats[xlon][xlat]]
-
-    cubep0 = cube0.copy()
-
-    for k in range(62):
-                    
-        cubep0.coord('level_height').points[k] += h[xlat][xlon].data * (1.0 - (cubep0.coord('level_height').points[k]/40e3) / 0.4338236) ** 2
-                
-
-    hp = [cubep0.coord('level_height').points]
-    dp = [0]
-    hs = [h[xlat][xlon].data]
-
-    Np, Nwp, Ndp = [N[t,:,xlat,xlon].data], [Nw[t,:,xlat,xlon].data], [Nd[t,:,xlat,xlon].data]
-    
-    for i in range(320):
-        for j in range(333):
-
-            if direction+0.2> Bearing(lons[j,i], lats[j,i]) > direction-0.2:
-                
-                lonp.append(lons[j,i])
-                latp.append(lats[j,i])
-
-                cubep = data[0][:,0:70,:,:]
-
-                for k in range(62):
-                    
-                    cubep.coord('level_height').points[k] += h[j][i].data * (1.0 - (cubep.coord('level_height').points[k]/40e3) / 0.4338236) ** 2
-                    
-                    
-                hp.append(cubep.coord('level_height').points.data)
-                hs.append(h[j][i].data)
-                dp.append(Distance(lons[j,i], lats[j,i]))
-                
-                Np.append(N[t,:,j,i].data)
-                Nwp.append(Nw[t,:,j,i].data)
-                Ndp.append(Nd[t,:,j,i].data)
-                
-                break
-
-
-X = np.tile(np.array(dp), (np.array(hp).shape[1], 1)).T
-
-print(np.shape(dp))
-print(np.shape(hp))
-
-
 fig = plt.figure(figsize=[20, 20])
 
-ax1 = fig.add_subplot(131, projection=ccrs.Mercator())
+ax1 = fig.add_subplot(131, projection=ccrs.PlateCarree())
 
 ax1.coastlines(zorder=3)
-co = ax1.contourf(lons, lats, h.data,
+co = ax1.contourf(x, y, h.data,
                 transform=ccrs.PlateCarree(),
-                cmap='rainbow', levels=50, alpha=0.2)
-ax1.scatter(lonp, latp, transform=ccrs.PlateCarree())
+                levels=50, alpha=0.2, vmin =300)
+ax1.scatter(lonc, latc, transform=ccrs.PlateCarree())
 cbar = fig.colorbar(co,ax=ax1, orientation='horizontal', fraction=.08, pad=0.04, shrink=0.8, aspect=12)
 cbar.set_label('Elevation (km)', labelpad=0.2)
+plt.show()
+# hlat = h.coord('grid_latitude').points
+# hlon = h.coord('grid_longitude').points
 
-ax1.set_aspect('equal')
+# x, y = np.meshgrid(glon, glat)
+# xh, yh = np.meshgrid(hlon, hlat)
 
-ax2 = fig.add_subplot(132)
+# lons, lats = iris.analysis.cartography.unrotate_pole(x, y, 177.5, 37.5)
+# lonsh, latsh = iris.analysis.cartography.unrotate_pole(xh, yh, 177.5, 37.5)
 
-ax2.plot(dp, hs)
-ax2.set_xlabel("Distance (km)")
-ax2.set_ylabel("Altitude (m)")
+# point = (lon_Clee, lat_Clee)
 
-ax3 = fig.add_subplot(133)
+# dist = np.sqrt((lons - point[0])**2 + (lats - point[1])**2)
+
+# min_index = np.unravel_index(np.argmin(dist), dist.shape)
+
+# xlon = min_index[1]
+# xlat = min_index[0]
+
+# print(lats[xlat][xlon], lons[xlat][xlon], latsh[xlat][xlon], lonsh[xlat][xlon])
+# print(q[t,:,xlat,xlon])
+
+# choice = 0
+
+# if(choice == 1):
+
+#     for i in range(62):
+        
+#         cube0.coord('level_height').points[i] += h[xlat][xlon].data * (1.0 - (cube0.coord('level_height').points[i]/40e3) / 0.4338236) ** 2
+
+#     plt.plot(q[t,:,xlat,xlon], cube0.coord('level_height').points)
+#     plt.ylim(0, 12e3)
+#     plt.show()
+
+#     full_array = np.stack([cube0.coord('level_height').points, N[t,:,xlat,xlon], Nd[t,:,xlat,xlon], Nw[t,:,xlat,xlon]], axis=1)
+
+#     np.savetxt("../refractivity/Sep21_N_{}.00_(km)_updated_orog.txt".format(t), full_array, delimiter=" ")
+
+# else:
+
+#     direction = 45
+
+#     lonp = [lons[xlat][xlon]]
+#     latp = [lats[xlat][xlon]]
+
+#     cubep0 = cube0.copy()
+
+#     for k in range(62):
+                    
+#         cubep0.coord('level_height').points[k] += h[xlat][xlon].data * (1.0 - (cubep0.coord('level_height').points[k]/40e3) / 0.4338236) ** 2
+                
+
+#     hp = [cubep0.coord('level_height').points]
+#     dp = [0]
+#     hs = [h[xlat][xlon].data]
+
+#     Np, Nwp, Ndp = [N[t,:,xlat,xlon].data], [Nw[t,:,xlat,xlon].data], [Nd[t,:,xlat,xlon].data]
+    
+#     for i in range(200):
+#         for j in range(279):
+
+#             if direction+0.5> Bearing(lons[j,i], lats[j,i]) > direction-0.5:
+                
+#                 lonp.append(lons[j,i])
+#                 latp.append(lats[j,i])
+
+#                 cubep = data[0][:,0:70,:,:]
+
+#                 for k in range(62):
+                    
+#                     cubep.coord('level_height').points[k] += h[j][i].data * (1.0 - (cubep.coord('level_height').points[k]/40e3) / 0.4338236) ** 2
+                    
+                    
+#                 hp.append(cubep.coord('level_height').points.data)
+#                 hs.append(h[j][i].data)
+#                 dp.append(Distance(lons[j,i], lats[j,i]))
+                
+#                 Np.append(N[t,:,j,i].data)
+#                 Nwp.append(Nw[t,:,j,i].data)
+#                 Ndp.append(Nd[t,:,j,i].data)
+                
+#                 break
+
+
+# X = np.tile(np.array(dp), (np.array(hp).shape[1], 1)).T
+
+# print(np.shape(dp))
+# print(np.shape(hp))
+
+
+# fig = plt.figure(figsize=[20, 20])
+
+# ax1 = fig.add_subplot(131, projection=ccrs.PlateCarree())
+
+# ax1.coastlines(zorder=3)
+# co = ax1.contourf(lons, lats, h.data,
+#                 transform=ccrs.PlateCarree(),
+#                 levels=50, alpha=0.2, vmin =300)
+# ax1.scatter(lon_Clee, lat_Clee, transform=ccrs.PlateCarree())
+# ax1.scatter(-2.7139, 52.3677, transform=ccrs.PlateCarree())
+# cbar = fig.colorbar(co,ax=ax1, orientation='horizontal', fraction=.08, pad=0.04, shrink=0.8, aspect=12)
+# cbar.set_label('Elevation (km)', labelpad=0.2)
+
+# ax1.set_aspect('equal')
+
+# ax2 = fig.add_subplot(132)
+
+# ax2.plot(dp, hs)
+# ax2.set_xlabel("Distance (km)")
+# ax2.set_ylabel("Altitude (m)")
+
+# ax3 = fig.add_subplot(133)
 
              
-plot = ax3.contourf(X, hp, Np, levels=100)
-ax3.set_ylabel("Altitude (km)")
-ax3.set_xlabel("Distance")  
-ax3.set_ylim(0, 5e3)
-cbar = plt.colorbar(plot)
-cbar.set_label('Refractivity (ppm)', labelpad=20)  
+# plot = ax3.contourf(X, hp, Np, levels=300)
+# ax3.set_ylabel("Altitude (km)")
+# ax3.set_xlabel("Distance")  
+# cbar = plt.colorbar(plot)
+# cbar.set_label('Refractivity (ppm)', labelpad=20)  
+
+# plt.savefig("../plots/Map_data_S.jpeg", dpi=700)
     
-plt.show()
+# plt.show()
