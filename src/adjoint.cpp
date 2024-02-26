@@ -53,7 +53,7 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
     std::vector<double> v(n_optim.size(), 0.0);
 
     std::ostringstream filerms;
-    filerms << "../RMS/PAPERII_RMS_NE_RK3_retrievals_t900_1800.txt";
+    filerms << "../RMS/PAPERII_RMS_NE_RK3_retrievals_t2700_3600.txt";
     std::ofstream rfilerms(filerms.str());
 
     for (int i(0); i < n_iter; i++)
@@ -206,7 +206,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
 };
 
-std::vector<std::vector<double>> Adjoint::retrieve_paths(double obs_height, int n_iter, double lrate, double dr)
+std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int n_iter, double lrate, double dr)
 {   
 
     
@@ -265,7 +265,12 @@ std::vector<std::vector<double>> Adjoint::retrieve_paths(double obs_height, int 
         flight_height1[jj] = tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0];
     }
 
-    return {flight_height0, flight_height1, n_optim};
+    std::vector<std::vector<double> > output;
+    output.push_back(flight_height0);
+    output.push_back(flight_height1);
+    output.push_back(n_optim);
+
+    return output;
 
 
 };

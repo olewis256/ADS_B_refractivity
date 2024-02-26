@@ -6,7 +6,8 @@
 #include "inputs.h"
 
 Atmosphere::Atmosphere(const std::string& file)
-    : file(file) {}
+    : file(file) { 
+}
 
 void Atmosphere::process() 
 {
@@ -48,9 +49,6 @@ const std::vector<double>& Atmosphere::NWET() const {
 
 ADSB::ADSB(const std::string& file, int length)
     : file(file), length(length) {
-
-    std::cout << "Number of observations: " << length << std::endl;
-
 }
 
 void ADSB::process() 
@@ -63,10 +61,14 @@ void ADSB::process()
         std::cerr << "Error: Unable to open ADS-B data file " << file << std::endl;
         return;
     }
+    else
+    {
+        std::cout << "Reading in: " << file << std::endl;
+    }
 
     double obsaoa, h, d, repaoa, azi, t;
 
-    while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t && (obsAOA_input.size() < length))
+    while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t && (length == 0 || obsAOA_input.size() <= length))
     {
         obsAOA_input.push_back(obsaoa);
         sin_obsAOA_input.push_back(sin(obsaoa*pi/180.0));
@@ -77,6 +79,9 @@ void ADSB::process()
         time_input.push_back(t);
 
     }
+
+    std::cout << "Number of observations: " << obsAOA_input.size() << std::endl;
+
 
     // while (inputFile >> obsaoa >> repaoa >> h >> d && (sin_obsAOA_input.size() < length))
     // {

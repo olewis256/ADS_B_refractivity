@@ -294,7 +294,7 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
 
 };
 
-std::vector<std::vector<double>> Tracer::trace_paths(double h0, double u0, double dmax, double dr,
+std::vector<std::vector<double>> Tracer::trace_paths(const double h0, const double u0,const double dmax, const double dr,
                                                  std::vector<double>& n, std::vector<double>& n_h, bool forward)
 {
     steps = (int) 600/dr;

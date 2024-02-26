@@ -55,7 +55,7 @@ class Adjoint
         std::vector<double> init_pos;
         std::vector<double> target_pos;
 
-        std::vector<std::vector<double>> forward;
+        std::vector<std::vector<double> > forward;
 
         double h_end, u_end, d_end;
 
@@ -82,7 +82,7 @@ class Adjoint
 
         std::vector<double> retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target, double noise);
 
-        std::vector<std::vector<double>> retrieve_paths(double obs_height, int n_iter, double lrate, double dr);
+        std::vector<std::vector<double> > retrieve_paths(double obs_height, int n_iter, double lrate, double dr);
 
         void progressBackProp(int prog, int tot);
 

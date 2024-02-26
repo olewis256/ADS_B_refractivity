@@ -23,7 +23,7 @@ class Tracer
         std::vector<double>::iterator i_lev1, i_lev2, i_lev3;
 
         std::vector<double> final_pos;
-        std::vector<std::vector<double>> paths;
+        std::vector<std::vector<double> > paths;
 
         double h_obs;
 
@@ -57,7 +57,7 @@ class Tracer
 
         std::vector<double> trace(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward = true);
 
-        std::vector<std::vector<double>> trace_paths(double h0, double u0, double d, double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward = true);
+        std::vector<std::vector<double> > trace_paths(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward = true);
 
         void backprop(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, std::vector<double>& ndry, const double n_surface_true,
                       std::vector<double>& n_h, const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v,

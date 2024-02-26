@@ -33,7 +33,7 @@ class ADSB
     private:
 
         const double pi = acos(-1);
-        const int length;
+        int length;
 
         std::string file;
         std::vector<double> obsAOA_input;
@@ -46,7 +46,7 @@ class ADSB
 
     public:
 
-        ADSB(const std::string& file, const int length);
+        ADSB(const std::string& file, int length = 0);
 
         void process();
 
@@ -57,7 +57,6 @@ class ADSB
         const std::vector<double>& repAoA() const;
         const std::vector<double>& azim() const;
         const std::vector<double>& rTime() const;
-
 };
 
 #endif
