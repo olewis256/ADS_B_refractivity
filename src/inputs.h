@@ -32,7 +32,6 @@ class ADSB
 {
     private:
 
-        const double pi = acos(-1);
         int length;
 
         std::string file;
@@ -43,6 +42,7 @@ class ADSB
         std::vector<double> repAOA_input;
         std::vector<double> azim_input;
         std::vector<double> time_input;
+        std::vector<double> arc_input;
 
     public:
 
@@ -57,6 +57,7 @@ class ADSB
         const std::vector<double>& repAoA() const;
         const std::vector<double>& azim() const;
         const std::vector<double>& rTime() const;
+        const std::vector<double>& arc() const;
 };
 
 #endif

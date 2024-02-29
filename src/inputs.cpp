@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "inputs.h"
+#include "constants.h"
 
 Atmosphere::Atmosphere(const std::string& file)
     : file(file) { 
@@ -66,17 +67,18 @@ void ADSB::process()
         std::cout << "Reading in: " << file << std::endl;
     }
 
-    double obsaoa, h, d, repaoa, azi, t;
+    double obsaoa, h, d, repaoa, azi, t, arc;
 
-    while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t && (length == 0 || obsAOA_input.size() <= length))
+    while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t >> arc && (length == 0 || obsAOA_input.size() <= length))
     {
         obsAOA_input.push_back(obsaoa);
-        sin_obsAOA_input.push_back(sin(obsaoa*pi/180.0));
+        sin_obsAOA_input.push_back(sin(obsaoa*PI/180.0));
         rH_input.push_back(h);
         rD_input.push_back(d);
         repAOA_input.push_back(repaoa);
         azim_input.push_back(azi);
         time_input.push_back(t);
+        arc_input.push_back(arc);
 
     }
 
@@ -118,4 +120,7 @@ const std::vector<double>& ADSB::azim() const {
 }
 const std::vector<double>& ADSB::rTime() const {
     return time_input;
+}
+const std::vector<double>& ADSB::arc() const {
+    return arc_input;
 }

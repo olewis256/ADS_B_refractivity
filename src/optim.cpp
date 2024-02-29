@@ -31,7 +31,7 @@ std::vector<double> h_adsb;
 std::vector<double> d_adsb;
 std::vector<double> r_adsb;
 std::vector<double> azim_adsb;
-
+std::vector<double> arc_adsb;
 
 int main(int argc, char* argv[])
 {
@@ -68,6 +68,7 @@ int main(int argc, char* argv[])
         const std::vector<double> azim_adsb_I = adsb_input.azim();
         const std::vector<double> h_adsb_I = adsb_input.rH();
         const std::vector<double> d_adsb_I = adsb_input.rD();
+        const std::vector<double> arc_adsb_I = adsb_input.arc();
     
         Tracer rayTracer;
 
@@ -80,7 +81,7 @@ int main(int argc, char* argv[])
             n_h[i] = OBSERVER_H + exp(2.7*i/n_lev) - 1.0;
 
             logn[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/9)/1e6);
-            logndry[i] = log(1.000 + interp_ndry(n_h[i])/1e6);
+            logndry[i] = 0.0;//log(1.000 + interp_ndry(n_h[i])/1e6);
             logn_init[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/9)/1e6);
 
             logn_target[i] = log(1.000 + interp_n(n_h[i])/1e6);
@@ -95,6 +96,8 @@ int main(int argc, char* argv[])
                 d_adsb.push_back(d_adsb_I[j]);
                 h_adsb.push_back(h_adsb_I[j]);
                 azim_adsb.push_back(azim_adsb_I[j]);
+                r_adsb.push_back(r_adsb_I[j]);
+                
             }
             
         
@@ -107,18 +110,18 @@ int main(int argc, char* argv[])
         std::vector<std::vector<double>> flightpath = Profile.retrieve_paths(OBSERVER_H, iterations, learn_rate, dr);
 
         std::ostringstream file;
-        file << "../flightpaths/PAPERII_retrieve_paths_t" << t << "_" << t+900 << ".txt";
+        file << "flightpaths/PAPERII_retrieve_paths_t" << t << "_" << t+900 << ".txt";
         std::ofstream rfile(file.str());
 
         for(int i(0); i < (int) u_adsb.size(); i++)
         {
-        rfile << asin(u_adsb[i])*180.0/PI << ' ' << h_adsb[i] << ' '  << d_adsb[i] << ' ' << flightpath[0][i] << ' ' << flightpath[1][i] << ' ' << azim_adsb[i] <<  std::endl;
+        rfile << asin(u_adsb[i])*180.0/PI << ' ' << h_adsb[i] << ' '  << d_adsb[i] << ' ' << flightpath[0][i] << ' ' << flightpath[1][i] << ' ' << r_adsb[i] << ' ' << azim_adsb[i] <<  std::endl;
         }
 
         rfile.close();
 
         std::ostringstream file2;
-        file2 << "../retrievals/PAPERII_retrieve_NE_TRUE_t" << t << "_" << t+900 << ".txt";
+        file2 << "retrievals/PAPERII_retrieve_NE_TRUE_t" << t << "_" << t+900 << ".txt";
         std::ofstream rfile2(file2.str());
 
         for(int i(0); i < n_lev; i++)
