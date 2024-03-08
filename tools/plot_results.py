@@ -5,9 +5,9 @@ import sys
 import pandas as pd
 import argparse
 
-r0 = 6364.765
+r0 = 6391.579965656317
 
-rep = lambda h, d : np.arctan( ((r0+h)*np.cos(d/r0) - (r0+0.527)) / ((r0+h)*np.sin(d/r0))) * 180/np.pi
+rep = lambda h, d : np.arctan( ((r0+h)*np.cos(d/r0) - (r0+0.577)) / ((r0+h)*np.sin(d/r0))) * 180/np.pi
 
 parser = argparse.ArgumentParser(
                     prog='Refraction plotting',
@@ -111,21 +111,21 @@ if (args.paths):
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(ncols=2,nrows=2,sharey=True,sharex=True,figsize=(10,10))
 
     ax1.scatter(-azim1, repAoA1, color='black', label='obs', s=1.5)
-    # ax1.scatter(-azim1, repAoA_init1, linewidth=0.5, color='blue', label='initial',s=1.5)
-    # ax1.scatter(-azim1, repAoA_ret1, color='green', label='retrieved',s=1.5)
-    ax1.scatter(-azim1, repAoA_sph1, color='skyblue', label='retrieved',s=1.5)
+    ax1.scatter(-azim1, repAoA_init1, linewidth=0.5, color='blue', label='initial',s=1.5)
+    ax1.scatter(-azim1, repAoA_ret1, color='green', label='retrieved',s=1.5)
+    # ax1.scatter(-azim1, repAoA_sph1, color='skyblue', label='retrieved',s=1.5)
     ax1.set_ylabel("Reported AoA (deg.)")
     ax1.set_xlabel("(a)")
 
-    print(repAoA1 - repAoA_sph1)
+    print(max(repAoA1 - repAoA_sph1))
 
     ax1.set_title('$0 < t \leq 15 $')
 
     print(azim2)
     ax2.scatter(-azim2, repAoA2, color='black',s=1.5)
-    # ax2.scatter(-azim2, repAoA_init2, linewidth=0.5, color='blue',s=1.5)
-    # ax2.scatter(-azim2, repAoA_ret2, color='green',s=1.5)
-    ax2.scatter(-azim2, repAoA_sph2, color='skyblue', label='retrieved',s=1.5)
+    ax2.scatter(-azim2, repAoA_init2, linewidth=0.5, color='blue',s=1.5)
+    ax2.scatter(-azim2, repAoA_ret2, color='green',s=1.5)
+    # ax2.scatter(-azim2, repAoA_sph2, color='skyblue', label='retrieved',s=1.5)
 
     ax2.set_xlabel("(b)")
 
@@ -134,9 +134,9 @@ if (args.paths):
     ax2.set_title('$15 < t \leq 30$')
 
     ax3.scatter(-azim3, repAoA3, color='black', s=1.5)
-    # ax3.scatter(-azim3, repAoA_init3, linewidth=0.5, color='blue',s=1.5)
-    # ax3.scatter(-azim3, repAoA_ret3, color='green',s=1.5)
-    ax3.scatter(-azim3, repAoA_sph3, color='skyblue', label='retrieved',s=1.5)
+    ax3.scatter(-azim3, repAoA_init3, linewidth=0.5, color='blue',s=1.5)
+    ax3.scatter(-azim3, repAoA_ret3, color='green',s=1.5)
+    # ax3.scatter(-azim3, repAoA_sph3, color='skyblue', label='retrieved',s=1.5)
 
     ax3.set_xlabel("Horizontal angle (deg.) \n (c)")
     ax4.set_xlabel("Horizontal angle (deg.) \n (d)")
@@ -147,9 +147,9 @@ if (args.paths):
     ax3.set_title('$30 < t \leq 45$')
 
     ax4.scatter(-azim4, repAoA4, color='black', s=1.5)
-    # ax4.scatter(-azim4, repAoA_init4, linewidth=0.5, color='blue',s=1.5)
-    # ax4.scatter(-azim4, repAoA_ret4, color='green',s=1.5)
-    ax4.scatter(-azim4, repAoA_sph4, color='skyblue', label='retrieved',s=1.5)
+    ax4.scatter(-azim4, repAoA_init4, linewidth=0.5, color='blue',s=1.5)
+    ax4.scatter(-azim4, repAoA_ret4, color='green',s=1.5)
+    # ax4.scatter(-azim4, repAoA_sph4, color='skyblue', label='retrieved',s=1.5)
 
     ax4.set_title('$45 < t\leq 60$')
 
