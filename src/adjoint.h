@@ -47,7 +47,8 @@ class Adjoint
         int steps;
         int size;
 
-        double loss;
+        double loss, loss_prev;
+        double n_loss, n_sum, n_grad_sum;
         double n_rms;
         double h_target;
 

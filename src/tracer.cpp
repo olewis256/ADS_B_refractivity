@@ -81,16 +81,12 @@ std::vector<double> Tracer::trace(const double h0, const double u0, const double
 
         k3h = dr*(u - k1u + 2*k2u);
         k3u = dr*( (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u)) * ( n3 + 1 / (r - k1h + 2*k2h)));
-
-        u_i = u;
         
         h = h + (k1h + 4*k2h + k3h)/6;
+        s = s + t*EARTH_R*asin(cos(asin(u))*dr / (EARTH_R + h));
         u = u + (k1u + 4*k2u + k3u)/6;
 
-        s = s + t*EARTH_R*asin(cos(asin(u_i))*dr / (EARTH_R + h));
-
-
-
+       
         if(s >= dmax || s <= 0)
         {
             final_pos = {h, u, s};
@@ -103,14 +99,14 @@ std::vector<double> Tracer::trace(const double h0, const double u0, const double
 
 }
 
-void Tracer::backprop(const double h0, const double u0, const double dmax, const double dr, std::vector<double>& n, std::vector<double>& ndry, const double n_init, std::vector<double>& n_h,
+std::vector<double> Tracer::backprop(const double h0, const double u0, const double dmax, const double dr, std::vector<double>& n, std::vector<double>& ndry, const double n_init, std::vector<double>& n_h,
                       const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v, int* index_n, double* dn_adj, double* obs_height)
 
 // -----------------------------------------------------------------------------------------------------
 //
 // Adjoint-based gradient descent.  Analagous to backpropagation in machine learning, the gradient of 
 // the loss function is propagated through the refractivity field.  Initally the loss function is 
-// differentiatedwith respect to the state variables h and u, before the full d L / d n is evaluated
+// differentiated with respect to the state variables h and u, before the full d L / d n is evaluated
 // through the backwards ray tracing.  The gradients d L / d n1 and d L / d n0 are evaluated at each step,
 // incrementing the refractivity values immediately above and below the ray position.  A third order Runge-
 // Kutta scheme is used to integrate the rays.
@@ -246,13 +242,9 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
         // Update respective refractivity values using gradient descent
         //-------------------------------------------------------------
 
-
-        u_i = u;
-
         h = h + (k1h + 4*k2h + k3h)/6;
+        s = s - EARTH_R*asin(cos(asin(u))*dr / (EARTH_R + h));
         u = u + (k1u + 4*k2u + k3u)/6;
-
-        s = s - EARTH_R*asin(cos(asin(u_i))*dr / (EARTH_R + h)); // reverse ray tracing, so negative sign used
 
         mu = mu + (k1mu + 4*k2mu + k3mu)/6;
         lam = lam + (k1lam + 4*k2lam + k3lam)/6;
@@ -291,7 +283,7 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
 
     n[0] = n_init; // Clamp surface refractivity
         
-
+    return ngrad;
 };
 
 std::vector<std::vector<double>> Tracer::trace_paths(const double h0, const double u0,const double dmax, const double dr,
@@ -359,11 +351,8 @@ std::vector<std::vector<double>> Tracer::trace_paths(const double h0, const doub
         k3u = dr*( (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u)) * ( n3 + 1 / (r - k1h + 2*k2h)));
 
         h = h + (k1h + 4*k2h + k3h)/6;
+        s = s + t*EARTH_R*asin(cos(asin(u))*dr / (EARTH_R + h));
         u = u + (k1u + 4*k2u + k3u)/6;
-
-        s = s + t*EARTH_R*asin(cos(asin(u_i))*dr / (EARTH_R + h));
-
-        
 
         if(s > dmax || s < 0)
         {

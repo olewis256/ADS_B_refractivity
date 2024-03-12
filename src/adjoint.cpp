@@ -214,8 +214,13 @@ std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int
     std::vector<double> flight_height0(size, 0.0);
     std::vector<double> flight_height1(size, 0.0);
 
+    std::vector<double> n_prev;
+    std::vector<double> n_grad;
+
     std::vector<double> m(n_optim.size(), 0.0);
     std::vector<double> v(n_optim.size(), 0.0);
+
+    double criterion1, criterion2, criterion3;
 
     // Initial flight paths
     //-----------------------
@@ -228,12 +233,14 @@ std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int
     for (int i(0); i < n_iter; i++)
     {   
      
-        loss = 0.0;
+        loss_prev = 0.0;
 
         for (int jj(0); jj < size; jj++)
         {
-            loss += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - h[jj]), 2);
+            loss_prev += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - h[jj]), 2);
         }
+
+        n_prev = n_optim;
 
         for (int j(0); j < size; j++)
         {
@@ -249,11 +256,44 @@ std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int
             u_end = -init_pos[1];
             d_end = init_pos[2];
 
-            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m, v);    
+            n_grad = tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m, v);    
             
         }    
 
-        std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss << "\n" << std::endl;
+        loss = 0.0;
+
+        for (int jj(0); jj < size; jj++)
+        {
+            loss += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - h[jj]), 2);
+        }
+
+        n_loss = 0.0;
+        n_grad_sum = 0.0;
+
+        for (int ii(0); ii < (int) n_optim.size(); ii++)
+        {
+            n_loss += pow((exp(n_optim[ii]) - exp(n_prev[ii])), 2);
+            n_sum += pow(exp(n_prev[ii]), 2);
+            n_grad_sum += pow(n_grad[ii], 2);
+        }
+
+        criterion1 = sqrt(pow((sqrt(loss) - sqrt(loss_prev)),2)) / (1 + sqrt(loss_prev));
+        criterion2 = sqrt(n_loss) / (1 + sqrt(n_sum));
+        criterion3 = sqrt(n_grad_sum) / (1 + sqrt(loss_prev));
+
+        if ((criterion1 < 1e-2) && (criterion2 < 1e-7) && (criterion3 <= 1e4))
+        {
+            std::cout << "Convergence at iteration " << i << ", stopping minimisation." << std::endl;
+            std::cout << "Criterion 1:  " << criterion1 << std::endl;
+            std::cout << "Criterion 2:  " << criterion2 << std::endl;
+            std::cout << "Criterion 3:  " << criterion3 << std::endl;
+            break;
+        }
+
+        std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss_prev << "\n" << std::endl;
+        // std::cout << "Criterion 1:  " << criterion1 << std::endl;
+        // std::cout << "Criterion 2:  " << criterion2 << std::endl;
+        // std::cout << "Criterion 3:  " << criterion3 << std::endl;
 
     }
 
