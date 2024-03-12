@@ -70,6 +70,18 @@ class Adjoint
         double perturb;
         double AoA;
 
+        //---------------------------------
+        // Adam optimisier hyperparameters
+        //---------------------------------
+
+        const double beta1 = 0.9;
+        const double beta2 = 0.999;
+        const double epsilon = 1e-8;
+
+        double m_est = 0.0;
+        double v_est = 0.0;
+
+
     public:
 
         //-------------------

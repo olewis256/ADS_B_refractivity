@@ -48,6 +48,9 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
 
 {   
 
+    std::vector<double> ngrad((int) n_optim.size(), 0.0);
+    double n_surf = n_optim[0];
+
     std::vector<double> cost_track(n_iter, 0.0);
     std::vector<double> m(n_optim.size(), 0.0);
     std::vector<double> v(n_optim.size(), 0.0);
@@ -81,7 +84,7 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
             u_end = -init_pos[1]; // reverse end direction of ray to initialise reverse pass
             d_end = init_pos[2];
 
-            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m ,v);        
+            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m ,v, ngrad);        
 
         }
 
@@ -100,6 +103,9 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
 
 std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target, double noise)
 {   
+
+    std::vector<double> ngrad((int) n_optim.size(), 0.0);
+    double n_surf = n_optim[0];
 
     std::cout << "Noise standard deviation: " << noise << "\n";
 
@@ -189,7 +195,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
             u_end = -init_pos[1];
             d_end = init_pos[2];
 
-            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_target[0], n_optim_h, lam, mu, lrate, i, m, v);
+            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_target[0], n_optim_h, lam, mu, lrate, i, m, v, ngrad);
         
 
         }
@@ -209,13 +215,12 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int n_iter, double lrate, double dr)
 {   
 
-    
-
     std::vector<double> flight_height0(size, 0.0);
     std::vector<double> flight_height1(size, 0.0);
 
     std::vector<double> n_prev;
-    std::vector<double> n_grad;
+    std::vector<double> ngrad((int) n_optim.size(), 0.0);
+    double n_surf = n_optim[0];
 
     std::vector<double> m(n_optim.size(), 0.0);
     std::vector<double> v(n_optim.size(), 0.0);
@@ -256,9 +261,30 @@ std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int
             u_end = -init_pos[1];
             d_end = init_pos[2];
 
-            n_grad = tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m, v);    
+            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m, v, ngrad);    
+
+        }   
+
+        for(int j(0); j < (int) n_optim.size(); j++)
+        {
+
+            // Adam optimiser
+            //---------------
+
+            m[j] = beta1*m[j] + (1.0-beta1)*ngrad[j];
+            v[j] = beta2*v[j] + (1.0-beta2)*ngrad[j]*ngrad[j];
+
+            m_est = m[j] / (1.0 - pow(beta1, (i+1)));
+            v_est = v[j] / (1.0 - pow(beta2, (i+1)));
+
             
-        }    
+            n_optim[j] -= lrate*m_est / sqrt(v_est + epsilon);
+
+
+            if(n_optim[j] < ndry[j]){n_optim[j] = ndry[j];}
+        }
+
+        n_optim[0] = n_surf; // Clamp surface refractivity 
 
         loss = 0.0;
 
@@ -274,7 +300,7 @@ std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int
         {
             n_loss += pow((exp(n_optim[ii]) - exp(n_prev[ii])), 2);
             n_sum += pow(exp(n_prev[ii]), 2);
-            n_grad_sum += pow(n_grad[ii], 2);
+            n_grad_sum += pow(ngrad[ii], 2);
         }
 
         criterion1 = sqrt(pow((sqrt(loss) - sqrt(loss_prev)),2)) / (1 + sqrt(loss_prev));
