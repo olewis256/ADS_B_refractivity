@@ -1,7 +1,6 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
-#include <iostream>
 
 #include "tracer.h"
 #include "constants.h"
@@ -100,9 +99,8 @@ std::vector<double> Tracer::trace(const double h0, const double u0, const double
 
 }
 
-void Tracer::backprop(const double h0, const double u0, const double dmax, const double dr, std::vector<double>& n, std::vector<double>& ndry, const double n_init, std::vector<double>& n_h,
-                      const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v, std::vector<double>& ngrad, int* index_n, double* dn_adj,
-                      double* obs_height)
+std::vector<double> Tracer::backprop(const double h0, const double u0, const double dmax, const double dr, std::vector<double>& n, std::vector<double>& ndry, const double n_init, std::vector<double>& n_h,
+                      const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v, int* index_n, double* dn_adj, double* obs_height)
 
 // -----------------------------------------------------------------------------------------------------
 //
@@ -160,6 +158,8 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
     else{
         h_obs = OBSERVER_H;
     }
+
+    std::vector<double> ngrad((int) n.size(), 0.0);
 
     for(int i(0); i < steps; i++)
     { 
@@ -224,8 +224,6 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
         dn0 = mu*(u*u - 1)*dw0_1;
         dn1 = mu*(u*u - 1)*dw1_1;
 
-        
-
         if (index_n != nullptr && dn_adj != nullptr)
         {
 
@@ -258,13 +256,41 @@ void Tracer::backprop(const double h0, const double u0, const double dmax, const
 
         if (index_n == nullptr && dn_adj == nullptr)
         {      
-          
+
+            // if(n_h[i_lev1 - 1 - n_h.begin()] > 6){
+
+            //     dn0 += 1e3*2*(n[i_lev1 - 1 - n_h.begin()] - ndry[i_lev1 - 1 - n_h.begin()]);
+            //     dn1 += 1e3*2*(n[i_lev1 - n_h.begin()] - ndry[i_lev1 - n_h.begin()]);
+
+            // }
+
             ngrad[i_lev1 - 1 - n_h.begin()] += dn0;
             ngrad[i_lev1 - n_h.begin()] += dn1;
             
         }
     }
+
+    for(int i(0); i < (int) n.size(); i++)
+    {
+
+        // Adam optimiser
+        //---------------
+
+        m[i] = beta1*m[i] + (1.0-beta1)*ngrad[i];
+        v[i] = beta2*v[i] + (1.0-beta2)*ngrad[i]*ngrad[i];
+
+        m_est = m[i] / (1.0 - pow(beta1, (iter+1)));
+        v_est = v[i] / (1.0 - pow(beta2, (iter+1)));
+
         
+        n[i] -= lrate*m_est / sqrt(v_est + epsilon);
+
+        if(n[i] < ndry[i]){n[i] = ndry[i];}
+    }
+
+    n[0] = n_init; // Clamp surface refractivity
+        
+    return ngrad;
 };
 
 std::vector<std::vector<double>> Tracer::trace_paths(const double h0, const double u0,const double dmax, const double dr,
@@ -344,5 +370,3 @@ std::vector<std::vector<double>> Tracer::trace_paths(const double h0, const doub
     return paths;
 
 }
-
-

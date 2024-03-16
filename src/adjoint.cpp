@@ -48,9 +48,6 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
 
 {   
 
-    std::vector<double> ngrad((int) n_optim.size(), 0.0);
-    double n_surf = n_optim[0];
-
     std::vector<double> cost_track(n_iter, 0.0);
     std::vector<double> m(n_optim.size(), 0.0);
     std::vector<double> v(n_optim.size(), 0.0);
@@ -84,7 +81,7 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
             u_end = -init_pos[1]; // reverse end direction of ray to initialise reverse pass
             d_end = init_pos[2];
 
-            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m ,v, ngrad);        
+            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m ,v);        
 
         }
 
@@ -103,9 +100,6 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
 
 std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target, double noise)
 {   
-
-    std::vector<double> ngrad((int) n_optim.size(), 0.0);
-    double n_surf = n_optim[0];
 
     std::cout << "Noise standard deviation: " << noise << "\n";
 
@@ -160,21 +154,28 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
     std::vector<double> cost_track(n_iter, 0.0);
 
+    std::vector<double> n_prev;
+    std::vector<double> n_grad;
+
+    double criterion1, criterion2, criterion3;
+
     std::ostringstream filerms;
-    filerms << "../RMS/PAPERII_RMS_NE_RK3_" << argi << "_" << noise << ".txt";
+    filerms << "../RMS/PAPERII_RMS_NE_RK3_" << argi << "_" << noise << "2.txt";
     std::ofstream rfilerms(filerms.str());
 
     for (int i(0); i < n_iter; i++)
     {   
 
-        loss = 0.0;
-        n_rms = 0.0;
+        loss_prev = 0.0;
+
         for (int jj(0); jj < size; jj++)
         {
-            loss += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - target_pos[jj]), 2);
+            loss_prev += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - target_pos[jj]), 2);
         }
-        cost_track[i] = loss;
-    
+
+        n_prev = n_optim;
+
+        n_rms = 0.0;
 
         for (int jjj(0); jjj < n_optim.size(); jjj++)
         {
@@ -195,15 +196,50 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
             u_end = -init_pos[1];
             d_end = init_pos[2];
 
-            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_target[0], n_optim_h, lam, mu, lrate, i, m, v, ngrad);
+            n_grad = tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_target[0], n_optim_h, lam, mu, lrate, i, m, v);
         
-
         }
 
+        loss = 0.0;
+
+        for (int jj(0); jj < size; jj++)
+        {
+            loss += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - target_pos[jj]), 2);
+        }
+
+        n_loss = 0.0;
+        n_sum = 0.0;
+        n_grad_sum = 0.0;
+
+        for (int ii(0); ii < (int) n_optim.size(); ii++)
+        {
+            n_loss += pow((exp(n_optim[ii]) - exp(n_prev[ii])), 2);
+            n_sum += pow(exp(n_prev[ii]), 2);
+            n_grad_sum += pow(n_grad[ii], 2);
+        }
+
+        criterion1 = sqrt(pow((sqrt(loss) - sqrt(loss_prev)),2)) / (1 + sqrt(loss_prev));
+        criterion2 = sqrt(n_loss) / (1 + sqrt(n_sum));
+        criterion3 = sqrt(n_grad_sum) / (1 + sqrt(loss_prev));
+
         
 
-        std::cout << "\n " << "iteration: " << (i+1) << ' ' << "loss: " << loss << " RMS N: " << sqrt(n_rms / n_optim.size()) << "\n" << std::endl;;            
+        std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss_prev << ' ' << "RMS: " << sqrt(n_rms / n_optim.size()) << "\n" << std::endl;
+        std::cout << "Criterion 1:  " << criterion1 << std::endl;
+        std::cout << "Criterion 2:  " << criterion2 << std::endl;
+        std::cout << "Criterion 3:  " << criterion3 << std::endl;
+
         rfilerms << i << ' ' << loss << ' ' << sqrt(n_rms / n_optim.size()) << std::endl;
+
+        if ((criterion1 < 1e-2) && (criterion2 < 1e-7))// && (criterion3 <= 1e2))
+        {
+            std::cout << "Convergence at iteration " << i << ", stopping minimisation." << std::endl;
+            std::cout << "Criterion 1:  " << criterion1 << std::endl;
+            std::cout << "Criterion 2:  " << criterion2 << std::endl;
+            std::cout << "Criterion 3:  " << criterion3 << std::endl;
+            break;
+        }
+
     }
 
     rfilerms.close();
@@ -215,12 +251,13 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int n_iter, double lrate, double dr)
 {   
 
+    
+
     std::vector<double> flight_height0(size, 0.0);
     std::vector<double> flight_height1(size, 0.0);
 
     std::vector<double> n_prev;
-    std::vector<double> ngrad((int) n_optim.size(), 0.0);
-    double n_surf = n_optim[0];
+    std::vector<double> n_grad;
 
     std::vector<double> m(n_optim.size(), 0.0);
     std::vector<double> v(n_optim.size(), 0.0);
@@ -261,30 +298,9 @@ std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int
             u_end = -init_pos[1];
             d_end = init_pos[2];
 
-            tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m, v, ngrad);    
-
-        }   
-
-        for(int j(0); j < (int) n_optim.size(); j++)
-        {
-
-            // Adam optimiser
-            //---------------
-
-            m[j] = beta1*m[j] + (1.0-beta1)*ngrad[j];
-            v[j] = beta2*v[j] + (1.0-beta2)*ngrad[j]*ngrad[j];
-
-            m_est = m[j] / (1.0 - pow(beta1, (i+1)));
-            v_est = v[j] / (1.0 - pow(beta2, (i+1)));
-
+            n_grad = tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_optim[0], n_optim_h, lam, mu, lrate, i, m, v);    
             
-            n_optim[j] -= lrate*m_est / sqrt(v_est + epsilon);
-
-
-            if(n_optim[j] < ndry[j]){n_optim[j] = ndry[j];}
-        }
-
-        n_optim[0] = n_surf; // Clamp surface refractivity 
+        }    
 
         loss = 0.0;
 
@@ -294,20 +310,23 @@ std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int
         }
 
         n_loss = 0.0;
+        n_sum = 0.0;
         n_grad_sum = 0.0;
 
         for (int ii(0); ii < (int) n_optim.size(); ii++)
         {
             n_loss += pow((exp(n_optim[ii]) - exp(n_prev[ii])), 2);
             n_sum += pow(exp(n_prev[ii]), 2);
-            n_grad_sum += pow(ngrad[ii], 2);
+            n_grad_sum += pow(n_grad[ii], 2);
         }
 
         criterion1 = sqrt(pow((sqrt(loss) - sqrt(loss_prev)),2)) / (1 + sqrt(loss_prev));
         criterion2 = sqrt(n_loss) / (1 + sqrt(n_sum));
         criterion3 = sqrt(n_grad_sum) / (1 + sqrt(loss_prev));
 
-        if ((criterion1 < 1e-2) && (criterion2 < 1e-7) && (criterion3 <= 1e4))
+        std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss_prev << "\n" << std::endl;
+
+        if ((criterion1 < 1e-2) && (criterion2 < 1e-7))// && (criterion3 <= 1e2))
         {
             std::cout << "Convergence at iteration " << i << ", stopping minimisation." << std::endl;
             std::cout << "Criterion 1:  " << criterion1 << std::endl;
@@ -316,7 +335,7 @@ std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int
             break;
         }
 
-        std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss_prev << "\n" << std::endl;
+        
         // std::cout << "Criterion 1:  " << criterion1 << std::endl;
         // std::cout << "Criterion 2:  " << criterion2 << std::endl;
         // std::cout << "Criterion 3:  " << criterion3 << std::endl;
@@ -340,4 +359,3 @@ std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int
 
 
 };
-
