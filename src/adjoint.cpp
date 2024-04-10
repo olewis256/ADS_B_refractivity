@@ -12,6 +12,8 @@
 #include "tracer.h"
 #include "constants.h"
 
+#include "../externals/spline.h"
+
 Tracer tracer;
 
 std::default_random_engine gen(time(0));
@@ -65,6 +67,7 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
         {
             loss += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - h[jj]), 2);
         }
+
         cost_track[i] = loss;
 
         for (int j(0); j < size; j++)
@@ -85,10 +88,8 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
 
         }
 
-
-        std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss << "\n" << std::endl;
+        std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss << "\n";
         rfilerms << i << ' ' << loss << std::endl;
-
     }
 
     rfilerms.close();    
@@ -103,11 +104,13 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
     std::cout << "Noise standard deviation: " << noise << "\n";
 
-    std::cout << "Obs Height" << ' ' << obs_height << std::endl;
+    std::cout << "Obs Height" << ' ' << obs_height << "\n";
 
     target_pos.clear();
 
     std::normal_distribution<double> distribution (0.0,noise);
+
+    tk::spline interp_n(n_optim_h,n_optim,tk::spline::cspline,true);
 
     for (int k(0); k < size; k++)
     {
@@ -117,13 +120,13 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
     if (noise > 0.0)
     {   
 
-        std::cout << "Noise added" << std::endl;
+        std::cout << "Noise added" << "\n";
 
         std::ostringstream filenoise;
         filenoise << "../Noise/PAPERII_noise_NE_RK3_" << argi << "_" << noise << ".txt";
         std::ofstream rfilenoise(filenoise.str());
 
-       double  AoArms = 0.0;
+        double AoArms = 0.0;
 
         for(int k(0); k < size; k++)
         {
@@ -131,15 +134,14 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
             AoA = asin(u[k]) + perturb*PI/180.0;
 
-            AoArms += pow((asin(u[k]) - AoA)*180.0/PI, 2);
+            AoArms += (asin(u[k]) - AoA)*180.0/PI * (asin(u[k]) - AoA)*180.0/PI;
 
             u[k] = sin(AoA);
 
             rfilenoise << perturb << std::endl; 
-
         }
 
-        std::cout << "AoA RMS: " << sqrt(AoArms/size) << std::endl;
+        std::cout << "AoA RMS: " << sqrt(AoArms/size) << "\n";
 
         rfilenoise.close();
 
@@ -191,7 +193,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
             lam = 2*(init_pos[0] - target_pos[j]);
             mu = 0.0;
-
+            
             h_end = init_pos[0];
             u_end = -init_pos[1];
             d_end = init_pos[2];
@@ -213,30 +215,28 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
         for (int ii(0); ii < (int) n_optim.size(); ii++)
         {
-            n_loss += pow((exp(n_optim[ii]) - exp(n_prev[ii])), 2);
-            n_sum += pow(exp(n_prev[ii]), 2);
-            n_grad_sum += pow(n_grad[ii], 2);
+            n_loss += (exp(n_optim[ii]) - exp(n_prev[ii])) * (exp(n_optim[ii]) - exp(n_prev[ii]));
+            n_sum += exp(n_prev[ii]) * exp(n_prev[ii]);
+            n_grad_sum += n_grad[ii] * n_grad[ii];
         }
 
-        criterion1 = sqrt(pow((sqrt(loss) - sqrt(loss_prev)),2)) / (1 + sqrt(loss_prev));
+        criterion1 = sqrt((sqrt(loss) - sqrt(loss_prev)) * (sqrt(loss) - sqrt(loss_prev))) / (1 + sqrt(loss_prev));
         criterion2 = sqrt(n_loss) / (1 + sqrt(n_sum));
         criterion3 = sqrt(n_grad_sum) / (1 + sqrt(loss_prev));
 
-        
+        std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss_prev << ' ' << "RMS: " << sqrt(n_rms / n_optim.size()) << "\n";
+        std::cout << "Criterion 1:  " << criterion1 << "\n";
+        std::cout << "Criterion 2:  " << criterion2 << "\n";
+        std::cout << "Criterion 3:  " << criterion3 << "\n";
 
-        std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss_prev << ' ' << "RMS: " << sqrt(n_rms / n_optim.size()) << "\n" << std::endl;
-        std::cout << "Criterion 1:  " << criterion1 << std::endl;
-        std::cout << "Criterion 2:  " << criterion2 << std::endl;
-        std::cout << "Criterion 3:  " << criterion3 << std::endl;
+        rfilerms << i << ' ' << loss << ' ' << sqrt(n_rms / n_optim.size()) << "\n";
 
-        rfilerms << i << ' ' << loss << ' ' << sqrt(n_rms / n_optim.size()) << std::endl;
-
-        if ((criterion1 < 1e-2) && (criterion2 < 1e-7))// && (criterion3 <= 1e2))
+        if ((criterion1 < 1e-7) && (criterion2 < 1e-7))// && (criterion3 <= 1e2))
         {
-            std::cout << "Convergence at iteration " << i << ", stopping minimisation." << std::endl;
-            std::cout << "Criterion 1:  " << criterion1 << std::endl;
-            std::cout << "Criterion 2:  " << criterion2 << std::endl;
-            std::cout << "Criterion 3:  " << criterion3 << std::endl;
+            std::cout << "Convergence at iteration " << i << ", stopping minimisation." << "\n";
+            std::cout << "Criterion 1:  " << criterion1 << "\n";
+            std::cout << "Criterion 2:  " << criterion2 << "\n";
+            std::cout << "Criterion 3:  " << criterion3 << "\n";
             break;
         }
 
@@ -315,18 +315,18 @@ std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int
 
         for (int ii(0); ii < (int) n_optim.size(); ii++)
         {
-            n_loss += pow((exp(n_optim[ii]) - exp(n_prev[ii])), 2);
-            n_sum += pow(exp(n_prev[ii]), 2);
-            n_grad_sum += pow(n_grad[ii], 2);
+            n_loss += (exp(n_optim[ii]) - exp(n_prev[ii])) * (exp(n_optim[ii]) - exp(n_prev[ii]));
+            n_sum += exp(n_prev[ii]) * exp(n_prev[ii]);
+            n_grad_sum += n_grad[ii] * n_grad[ii];
         }
 
-        criterion1 = sqrt(pow((sqrt(loss) - sqrt(loss_prev)),2)) / (1 + sqrt(loss_prev));
+        criterion1 = sqrt((sqrt(loss) - sqrt(loss_prev)) * (sqrt(loss) - sqrt(loss_prev))) / (1 + sqrt(loss_prev));
         criterion2 = sqrt(n_loss) / (1 + sqrt(n_sum));
         criterion3 = sqrt(n_grad_sum) / (1 + sqrt(loss_prev));
 
         std::cout << "\n" << "iteration: " << i << ' ' << "loss: " << loss_prev << "\n" << std::endl;
 
-        if ((criterion1 < 1e-2) && (criterion2 < 1e-7))// && (criterion3 <= 1e2))
+        if ((criterion1 < 1e-6) && (criterion2 < 1e-7))// && (criterion3 <= 1e2))
         {
             std::cout << "Convergence at iteration " << i << ", stopping minimisation." << std::endl;
             std::cout << "Criterion 1:  " << criterion1 << std::endl;

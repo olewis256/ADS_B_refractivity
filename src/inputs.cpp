@@ -20,11 +20,15 @@ void Atmosphere::process()
         std::cerr << "Error: Unable to open refractivity profile file " << file << std::endl;
         return;
     }
+    else
+    {
+        std::cout << "Reading in atmosphere file: " << file << std::endl;
+    }
 
     double h, n, ndry, nwet;
 
     while (inputFile >> h >> n >> ndry >> nwet)
-    {
+    {   
         H_input.push_back(h*1e-3);
         N_input.push_back(n);
         NDRY_input.push_back(ndry);
@@ -67,9 +71,10 @@ void ADSB::process()
         std::cout << "Reading in: " << file << std::endl;
     }
 
-    double obsaoa, h, d, repaoa, azi, t, arc;
+    double obsaoa, h, d, repaoa, azi, t, arc, lat, lon;
+    std::string icao;
 
-    while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t >> arc && (length == 0 || obsAOA_input.size() <= length))
+    while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t >> arc >> lat >> lon >> icao && (length == 0 || obsAOA_input.size() <= length))
     {
         obsAOA_input.push_back(obsaoa);
         sin_obsAOA_input.push_back(sin(obsaoa*PI/180.0));
@@ -79,6 +84,7 @@ void ADSB::process()
         azim_input.push_back(azi);
         time_input.push_back(t);
         arc_input.push_back(arc);
+        lat_input.push_back(lat);
 
     }
 
@@ -123,4 +129,7 @@ const std::vector<double>& ADSB::rTime() const {
 }
 const std::vector<double>& ADSB::arc() const {
     return arc_input;
+}
+const std::vector<double>& ADSB::lat() const {
+    return lat_input;
 }

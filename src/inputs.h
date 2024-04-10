@@ -43,6 +43,7 @@ class ADSB
         std::vector<double> azim_input;
         std::vector<double> time_input;
         std::vector<double> arc_input;
+        std::vector<double> lat_input;
 
     public:
 
@@ -58,6 +59,7 @@ class ADSB
         const std::vector<double>& azim() const;
         const std::vector<double>& rTime() const;
         const std::vector<double>& arc() const;
+        const std::vector<double>& lat() const;
 };
 
 #endif

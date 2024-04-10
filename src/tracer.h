@@ -47,6 +47,8 @@ class Tracer
         double m_est = 0.0;
         double v_est = 0.0;
 
+        double gamma = 0.2;
+
        
     public:
 
