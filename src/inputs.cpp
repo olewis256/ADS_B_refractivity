@@ -74,7 +74,7 @@ void ADSB::process()
     double obsaoa, h, d, repaoa, azi, t, arc, lat, lon;
     std::string icao;
 
-    while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t >> arc >> lat >> lon >> icao && (length == 0 || obsAOA_input.size() <= length))
+    while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t >> arc >> lat >> lon >> icao && (length == 0 || obsAOA_input.size() < length))
     {
         obsAOA_input.push_back(obsaoa);
         sin_obsAOA_input.push_back(sin(obsaoa*PI/180.0));

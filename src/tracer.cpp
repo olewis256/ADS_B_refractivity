@@ -100,7 +100,7 @@ std::vector<double> Tracer::trace(const double h0, const double u0, const double
 }
 
 std::vector<double> Tracer::backprop(const double h0, const double u0, const double dmax, const double dr, std::vector<double>& n, std::vector<double>& ndry, const double n_init, std::vector<double>& n_h,
-                      const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v, int* index_n, double* dn_adj, double* obs_height)
+                      const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v, double* obs_height, int* index_n, double* dn_adj)
 
 // -----------------------------------------------------------------------------------------------------
 //
@@ -165,49 +165,70 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
     { 
         r = h + EARTH_R;
 
-        // k1 
+        if(h < OBSERVER_H)
         {
-            i_lev1 = std::upper_bound(n_h.begin(), n_h.end(), h);
 
-            dw0_1 = - 1  / ( n_h[i_lev1 - n_h.begin()] - n_h[i_lev1 - 1 - n_h.begin()] );
-            dw1_1 = -1 * dw0_1;
-                
-            n1 = dw0_1*n[i_lev1 - 1 - n_h.begin()] + dw1_1*n[i_lev1 - n_h.begin()]; 
+            k1h = dr*u;
+            k2h = k1h;
+            k3h = k1h;
+            
+            k1u = dr*( (1 - u*u) * (n[0] + (1 / r)) );
+            k2u = k1u;
+            k3u = k1u;
+
+            k1lam = dr*( mu * (1 - u*u) * ( n[0]*n[0] + 1 / (r*r) ) );
+            k2lam = k1lam;
+            k3lam = k1lam;
+
+            k1mu = dr*( -lam + 2 * mu * u * (n[0] + (1 / r)));
+            k2mu = k1mu;
+            k3mu = k1mu;
+            
         }
 
-        k1h = dr*u;
-        k1u = dr*( (1 - u*u) * (n1 + (1 / r)) );
-
-        // k2
+        else
         {
-            i_lev2 = std::upper_bound(n_h.begin(), n_h.end(), (h + k1h/2));
+            // k1 
+            {
+                i_lev1 = std::upper_bound(n_h.begin(), n_h.end(), h);
 
-            dw0_2 = - 1  / ( n_h[i_lev2 - n_h.begin()] - n_h[i_lev2 - 1 - n_h.begin()] );
-            dw1_2 = -1 * dw0_2;
+                dw0_1 = - 1  / ( n_h[i_lev1 - n_h.begin()] - n_h[i_lev1 - 1 - n_h.begin()] );
+                dw1_1 = -1 * dw0_1;
+                    
+                n1 = dw0_1*n[i_lev1 - 1 - n_h.begin()] + dw1_1*n[i_lev1 - n_h.begin()]; 
+            }
 
-            n2 = dw0_2*n[i_lev2 - 1 - n_h.begin()] + dw1_2*n[i_lev2 - n_h.begin()]; 
-        }
+            k1h = dr*u;
+            k1u = dr*( (1 - u*u) * (n1 + (1 / r)) );
 
-        k2h = dr*(u + k1u/2);
-        k2u = dr*( (1 - (u + k1u/2)*(u + k1u/2) )  * ( n2 +  1 / (r + k1h/2)  ) );
+            // k2
+            {
+                i_lev2 = std::upper_bound(n_h.begin(), n_h.end(), (h + k1h/2));
 
-        // k3
-        {
-            i_lev3 = std::upper_bound(n_h.begin(), n_h.end(), (h - k1h + 2*k2h));
+                dw0_2 = - 1  / ( n_h[i_lev2 - n_h.begin()] - n_h[i_lev2 - 1 - n_h.begin()] );
+                dw1_2 = -1 * dw0_2;
 
-            dw0_3 = - 1  / ( n_h[i_lev3 - n_h.begin()] - n_h[i_lev3 - 1 - n_h.begin()] );
-            dw1_3 = -1 * dw0_3;
+                n2 = dw0_2*n[i_lev2 - 1 - n_h.begin()] + dw1_2*n[i_lev2 - n_h.begin()]; 
+            }
 
-            n3 = dw0_3*n[i_lev3 - 1 - n_h.begin()] + dw1_3*n[i_lev3 - n_h.begin()];
-        }
+            k2h = dr*(u + k1u/2);
+            k2u = dr*( (1 - (u + k1u/2)*(u + k1u/2) )  * ( n2 +  1 / (r + k1h/2)  ) );
 
-        k3h = dr*(u - k1u + 2*k2u);
-        k3u = dr*( (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u)) * ( n3 + 1 / (r - k1h + 2*k2h)));
+            // k3
+            {
+                i_lev3 = std::upper_bound(n_h.begin(), n_h.end(), (h - k1h + 2*k2h));
 
-        // k lam and mu
+                dw0_3 = - 1  / ( n_h[i_lev3 - n_h.begin()] - n_h[i_lev3 - 1 - n_h.begin()] );
+                dw1_3 = -1 * dw0_3;
 
+                n3 = dw0_3*n[i_lev3 - 1 - n_h.begin()] + dw1_3*n[i_lev3 - n_h.begin()];
+            }
 
-        {
+            k3h = dr*(u - k1u + 2*k2u);
+            k3u = dr*( (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u)) * ( n3 + 1 / (r - k1h + 2*k2h)));
+
+            // k lam and mu
+            
             k1lam = dr*( mu * (1 - u*u) * ( n1*n1 + 1 / (r*r) ) );
             k1mu = dr*( -lam + 2 * mu * u * (n1 + (1 / r)));
 
@@ -216,8 +237,9 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
 
             k3lam = dr*( (mu - k1mu + 2*k2mu) * (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u) )  * ( n3*n3 + 1 / ( (r - k1h + 2*k2h)*(r - k1h + 2*k2h) ) ) );
             k3mu = dr*( -(lam - k1lam + 2*k2lam) + 2 * (mu - k1mu + 2*k2mu) * (u - k1u + 2*k2u) * (n3 + 1 / (r - k1h + 2*k2h) ) );
+        
         }
-
+        
         // Evaluate gradients for upper and lower refractivity values
         //-----------------------------------------------------------
 
@@ -285,7 +307,7 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
         
         n[i] -= lrate*m_est / sqrt(v_est + epsilon);
 
-        if(n[i] < ndry[i]){n[i] = ndry[i];}
+        //if(n[i] < ndry[i]){n[i] = ndry[i];}
     }
 
     n[0] = n_init; // Clamp surface refractivity

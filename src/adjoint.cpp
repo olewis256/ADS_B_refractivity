@@ -99,13 +99,25 @@ std::vector<double> Adjoint::retrieve(double obs_height, int n_iter, double lrat
 
 };
 
-std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target, double noise)
+std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target, double noise, double* n_err, double* h_err, double* zero_point)
 {   
 
-    std::cout << "Noise standard deviation: " << noise << "\n";
+    std::cout << "Noise standard deviation: " << noise << " deg. \n";
 
-    std::cout << "Obs Height" << ' ' << obs_height << "\n";
+    std::cout << "Receiver altitude: " << obs_height << " km \n";
 
+    if(h_err != nullptr)
+    {
+        std::cout << "Receiver altitude uncertainty: " << *h_err << " km \n";
+    }
+    if(n_err != nullptr)
+    {
+        std::cout << "Surface refractivity uncertainty: " << *n_err << " ppm \n";
+    }
+    if(n_err != nullptr)
+    {
+        std::cout << "Zero-point offset: " << *zero_point << " deg. \n";
+    }
     target_pos.clear();
 
     std::normal_distribution<double> distribution (0.0,noise);
@@ -119,11 +131,10 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
     if (noise > 0.0)
     {   
-
         std::cout << "Noise added" << "\n";
 
         std::ostringstream filenoise;
-        filenoise << "../Noise/PAPERII_noise_NE_RK3_" << argi << "_" << noise << ".txt";
+        filenoise << "../Noise/PAPERII_sensitivity_NE_RK3_" << argi << "_" << noise << ".txt";
         std::ofstream rfilenoise(filenoise.str());
 
         double AoArms = 0.0;
@@ -165,6 +176,34 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
     filerms << "../RMS/PAPERII_RMS_NE_RK3_" << argi << "_" << noise << "2.txt";
     std::ofstream rfilerms(filerms.str());
 
+    if(h_err != nullptr)
+    {
+        obs_height += *h_err;
+        std::cout << "Measured receiver altitude: " << obs_height << " km \n";
+    }
+    else
+    {
+        obs_height = obs_height;
+    }
+
+    if(n_err != nullptr)
+    {
+        n_0 = log(1.00 + ((exp(n_target[0]) - 1.0)*1e6 + *n_err)/1e6);
+        n_optim[0] = log(1.000 + ((exp(n_target[0]) - 1.0)*1e6 + *n_err)/1e6);
+    }
+    else
+    {
+        n_0 = n_target[0];
+    }
+
+    if(zero_point != nullptr)
+    {
+        for(int k(0); k < size; k++)
+        {
+            u[k] = sin(asin(u[k]) + *zero_point*PI/180.0);
+        }
+    }
+
     for (int i(0); i < n_iter; i++)
     {   
 
@@ -198,7 +237,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
             u_end = -init_pos[1];
             d_end = init_pos[2];
 
-            n_grad = tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_target[0], n_optim_h, lam, mu, lrate, i, m, v);
+            n_grad = tracer.backprop(h_end, u_end, d_end, dr, n_optim, ndry, n_0, n_optim_h, lam, mu, lrate, i, m, v, &obs_height);
         
         }
 
