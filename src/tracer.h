@@ -61,8 +61,8 @@ class Tracer
         std::vector<std::vector<double> > trace_paths(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, std::vector<double>& n_h, bool forward = true);
 
         std::vector<double> backprop(const double h0, const double u0, const double d, const double dr_i, std::vector<double>& n, std::vector<double>& ndry, const double n_surface_true,
-                      std::vector<double>& n_h, const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v,
-                      int* index_n = nullptr, double* dn_adj = nullptr, double* obs_height = nullptr);
+                      std::vector<double>& n_h, const double lam0, const double mu0, const double lrate, int iter, std::vector<double>& m, std::vector<double>& v, double* obs_height = nullptr,
+                      int* index_n = nullptr, double* dn_adj = nullptr);
 
 };
 

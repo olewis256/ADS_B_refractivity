@@ -1,6 +1,11 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <sstream>
+#include <cstdio>
 
 #include "tracer.h"
 #include "constants.h"
@@ -165,28 +170,28 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
     { 
         r = h + EARTH_R;
 
-        if(h < OBSERVER_H)
-        {
+        // if(h < OBSERVER_H)
+        // {
 
-            k1h = dr*u;
-            k2h = k1h;
-            k3h = k1h;
+        //     k1h = dr*u;
+        //     k2h = k1h;
+        //     k3h = k1h;
             
-            k1u = dr*( (1 - u*u) * (n[0] + (1 / r)) );
-            k2u = k1u;
-            k3u = k1u;
+        //     k1u = dr*( (1 - u*u) * (n[0] + (1 / r)) );
+        //     k2u = k1u;
+        //     k3u = k1u;
 
-            k1lam = dr*( mu * (1 - u*u) * ( n[0]*n[0] + 1 / (r*r) ) );
-            k2lam = k1lam;
-            k3lam = k1lam;
+        //     k1lam = dr*( mu * (1 - u*u) * ( n[0]*n[0] + 1 / (r*r) ) );
+        //     k2lam = k1lam;
+        //     k3lam = k1lam;
 
-            k1mu = dr*( -lam + 2 * mu * u * (n[0] + (1 / r)));
-            k2mu = k1mu;
-            k3mu = k1mu;
+        //     k1mu = dr*( -lam + 2 * mu * u * (n[0] + (1 / r)));
+        //     k2mu = k1mu;
+        //     k3mu = k1mu;
             
-        }
+        // }
 
-        else
+        // else
         {
             // k1 
             {
@@ -271,8 +276,8 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
         mu = mu + (k1mu + 4*k2mu + k3mu)/6;
         lam = lam + (k1lam + 4*k2lam + k3lam)/6;
 
-        if( s <= 1e-6 || h <= h_obs)
-        {
+        if( s <= 1e-6 || h <= h_obs || h >= OBSERVER_H + exp(2.7*29/30) - 1.0)
+        {   
             break;
         }
 
@@ -310,7 +315,7 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
         //if(n[i] < ndry[i]){n[i] = ndry[i];}
     }
 
-    n[0] = n_init; // Clamp surface refractivity
+    //n[0] = n_init; // Clamp surface refractivity
         
     return ngrad;
 };

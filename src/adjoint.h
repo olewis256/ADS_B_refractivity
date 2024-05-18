@@ -70,6 +70,8 @@ class Adjoint
         double perturb;
         double AoA;
 
+        double n_0;
+
     public:
 
         //-------------------
@@ -81,7 +83,7 @@ class Adjoint
 
         std::vector<double> retrieve(double obs_height, int n_iter, double lrate, double dr);
 
-        std::vector<double> retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target, double noise);
+        std::vector<double> retrieve_synthetic(double obs_height, int n_iter, double lrate, double dr, std::vector<double>& n_target, double noise, double* n_err = nullptr, double* h_err = nullptr, double* zero_point = nullptr);
 
         std::vector<std::vector<double> > retrieve_paths(double obs_height, int n_iter, double lrate, double dr);
 

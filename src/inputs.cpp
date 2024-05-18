@@ -88,6 +88,19 @@ void ADSB::process()
 
     }
 
+    // while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t && (length == 0 || obsAOA_input.size() < length))
+    // {
+    //     obsAOA_input.push_back(obsaoa);
+    //     sin_obsAOA_input.push_back(sin(obsaoa*PI/180.0));
+    //     rH_input.push_back(h);
+    //     rD_input.push_back(d);
+    //     repAOA_input.push_back(repaoa);
+    //     azim_input.push_back(azi);
+    //     time_input.push_back(t);
+
+
+    // }
+
     std::cout << "Number of observations: " << obsAOA_input.size() << std::endl;
 
 
