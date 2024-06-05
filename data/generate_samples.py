@@ -23,7 +23,7 @@ epsilon = np.sqrt(1 - (b/a)**2)
 
 lat_Clee = 52.398423
 lon_Clee = -2.595478
-h_Clee = 0.560
+h_Clee = 0.556
 
 #------------------------------------------------
 
@@ -57,9 +57,68 @@ def mapData(lons, lats, dist, save=False):
     cbar.set_label('Distance (km)',labelpad=10)
     plt.tight_layout()
     
-    plt.savefig("../plots/PAPERII_map_all.jpeg", dpi=700)
+    plt.savefig("../plots/PAPERII_map_NE.jpeg", dpi=700)
     plt.show()
 
+def coord_transform(lat_i, lon_i, height):
+
+    Z_offset = np.sin(lat_Clee*np.pi/180)*N(lat_Clee*np.pi/180)*epsilon**2
+
+    # -------------------------------
+    #  Observer geodetic coordinates
+    #--------------------------------
+
+    Xog = (N(lat_Clee*np.pi/180) + h_Clee)*np.cos(lat_Clee*np.pi/180)*np.cos(lon_Clee*np.pi/180)
+    Yog = (N(lat_Clee*np.pi/180) + h_Clee)*np.cos(lat_Clee*np.pi/180)*np.sin(lon_Clee*np.pi/180)
+    Zog = (N(lat_Clee*np.pi/180) + h_Clee)*np.sin(lat_Clee*np.pi/180)
+
+    # -------------------------------
+    #  Aircraft geodetic coordinates
+    #--------------------------------
+
+    Xpg = (N(lat_i) + height)*np.cos(lat_i)*np.cos(lon_i)
+    Ypg = (N(lat_i) + height)*np.cos(lat_i)*np.sin(lon_i)
+    Zpg = (N(lat_i) + height)*np.sin(lat_i)
+
+    # ------------------------
+    #  Geocentric coordinates
+    #-------------------------
+
+    X = (N(lat_i) + height)*np.cos(lat_i)*np.cos(lon_i)
+    Y = (N(lat_i) + height)*np.cos(lat_i)*np.sin(lon_i)
+    Z = (N(lat_i)*(1-epsilon**2) + height)*np.sin(lat_i) 
+
+    # ------------------------------
+    #  Observed-centric coordinates
+    #-------------------------------
+
+    Xp = X
+    Yp = Y
+    Zp = (N(lat_i)*(1-epsilon**2) + height)*np.sin(lat_i) + Z_offset
+
+    Rp = np.sqrt(Xp**2 + Yp**2 + Zp**2)
+    Rog = np.sqrt(Xog**2 + Yog**2 + Zog**2)
+
+    air_coords = np.array([Xp/Rp, Yp/Rp, Zp/Rp])
+    obs_coords = np.array([Xog/Rog, Yog/Rog, Zog/Rog])
+
+    arc_angle_o = np.arccos(np.dot(obs_coords, air_coords))
+
+    dX = Xp - Xog
+    dY = Yp - Yog
+    dZ = Zp - Zog
+
+    dR = np.sqrt(dX**2 + dY**2 + dZ**2)
+
+    airdir_coords = np.array([dX/dR, dY/dR, dZ/dR])
+
+    obs_coords = np.array([Xog/Rog, Yog/Rog, Zog/Rog])
+
+    zenith = np.arcsin(np.dot(obs_coords, airdir_coords))
+
+    cozenith = zenith
+
+    return cozenith, arc_angle_o, dR
 
 parser = argparse.ArgumentParser(
                     prog='Generate ADS-B data from CSV file',
@@ -99,16 +158,24 @@ parser.add_argument('--may', action='store_true',
 parser.add_argument('--time', type=int,
                     help='Start time (s)')
 
+parser.add_argument('--alt', action='store_true',
+                    help='Start time (s)')
+
 args = parser.parse_args()
 
+if(args.alt):
+    df_orig = pd.read_csv('Data/clee_hill_alt.txt')
+    height = df_orig['altHAE']
+    print("Mean height ", np.mean(height))
+    print("STD ", np.std(height))
 
 if(args.paper_real):
 
     df_orig = pd.read_csv('Data/cleehill.ringway.day2.csv')
-    # df_orig = pd.DataFrame(dataClee, columns=['ICAO','CALLSIGN','ALTITUDE','LONGITUDE',
-    #                                         'LATITUDE','TIMESTAMP','DISTANCE','BHATDOTRHAT',
-    #                                         'BHATDOTRHATV','ARCANG','RP','RSURF','H','MODEL',
-    #                                         'OBS', 'OBSC', 'RMSC'])
+    df_orig = pd.DataFrame(df_orig, columns=['ICAO','CALLSIGN','ALTITUDE','LONGITUDE',
+                                            'LATITUDE','TIMESTAMP','DISTANCE','BHATDOTRHAT',
+                                            'BHATDOTRHATV','ARCANG','RP','RSURF','H','MODEL',
+                                            'OBS', 'OBSC', 'RMSC'])
     df_orig = df_orig.sort_values('TIMESTAMP')
 
     df_orig['TIMESTAMP'] = df_orig['TIMESTAMP']*0.4
@@ -183,54 +250,7 @@ if(args.paper_real):
 
             lon_i, lat_i = lons*np.pi/180, lats*np.pi/180
 
-            Z_offset = np.sin(lat_Clee*np.pi/180)*N(lat_Clee*np.pi/180)*epsilon**2
-
-            # -------------------------------
-            #  Observer geodetic coordinates
-            #--------------------------------
-
-            Xog = (N(lat_Clee*np.pi/180) + h_Clee)*np.cos(lat_Clee*np.pi/180)*np.cos(lon_Clee*np.pi/180)
-            Yog = (N(lat_Clee*np.pi/180) + h_Clee)*np.cos(lat_Clee*np.pi/180)*np.sin(lon_Clee*np.pi/180)
-            Zog = (N(lat_Clee*np.pi/180) + h_Clee)*np.sin(lat_Clee*np.pi/180)
-
-            # ------------------------
-            #  Geocentric coordinates
-            #-------------------------
-
-            X = (N(lat_i) + height)*np.cos(lat_i)*np.cos(lon_i)
-            Y = (N(lat_i) + height)*np.cos(lat_i)*np.sin(lon_i)
-            Z = (N(lat_i)*(1-epsilon**2) + height)*np.sin(lat_i) 
-
-            # ------------------------------
-            #  Observed-centric coordinates
-            #-------------------------------
-
-            Xp = X
-            Yp = Y
-            Zp = (N(lat_i)*(1-epsilon**2) + height)*np.sin(lat_i) + Z_offset
-
-            Rp = np.sqrt(Xp**2 + Yp**2 + Zp**2)
-            Rog = np.sqrt(Xog**2 + Yog**2 + Zog**2)
-
-            air_coords = np.array([Xp/Rp, Yp/Rp, Zp/Rp])
-            obs_coords = np.array([Xog/Rog, Yog/Rog, Zog/Rog])
-
-            arc_angle_o = np.arccos(np.dot(obs_coords, air_coords))
-
-            dX = Xp - Xog
-            dY = Yp - Yog
-            dZ = Zp - Zog
-
-            dR = np.sqrt(dX**2 + dY**2 + dZ**2)
-            Rog = np.sqrt(Xog**2 + Yog**2 + Zog**2)
-
-            airdir_coords = np.array([dX/dR, dY/dR, dZ/dR])
-
-            obs_coords = np.array([Xog/Rog, Yog/Rog, Zog/Rog])
-
-            zenith = np.arccos(np.dot(obs_coords, airdir_coords))
-
-            cozenith = np.pi/2 - zenith
+            cozenith, arc_angle_o, dist = coord_transform(lat_i, lon_i, height)
 
             df_sample = pd.DataFrame({'obsAoA': obsAoA, 'h': height, 'd': dist, 'repAoA': cozenith*180/np.pi, 'azim': azim, 'timestamp': time, 'arcang': arc_angle_o, 'lat': lats, 'lon': lons, 'icao': icao})
 
@@ -241,11 +261,11 @@ if(args.paper_real):
 
             mapData(df_orig['LONGITUDE'], df_orig['LATITUDE'], df_orig['DISTANCE'])
 
-            plt.close()
-
-            
+            plt.close()            
 
             if(args.geom):
+
+                Z_offset = np.sin(lat_Clee*np.pi/180)*N(lat_Clee*np.pi/180)*epsilon**2
 
                 max_lat = max(lats)/90 * np.pi/2
                 min_lat = lat_Clee/90 * np.pi/2
@@ -335,61 +355,7 @@ if(args.south):
 
         lon_i, lat_i = lons*np.pi/180, lats*np.pi/180
 
-        Z_offset = np.sin(lat_Clee*np.pi/180)*N(lat_Clee*np.pi/180)*epsilon**2
-
-        # -------------------------------
-        #  Observer geodetic coordinates
-        #--------------------------------
-
-        Xog = (N(lat_Clee*np.pi/180) + h_Clee)*np.cos(lat_Clee*np.pi/180)*np.cos(lon_Clee*np.pi/180)
-        Yog = (N(lat_Clee*np.pi/180) + h_Clee)*np.cos(lat_Clee*np.pi/180)*np.sin(lon_Clee*np.pi/180)
-        Zog = (N(lat_Clee*np.pi/180) + h_Clee)*np.sin(lat_Clee*np.pi/180)
-
-        # -------------------------------
-        #  Aircraft geodetic coordinates
-        #--------------------------------
-
-        Xpg = (N(lat_i) + height)*np.cos(lat_i)*np.cos(lon_i)
-        Ypg = (N(lat_i) + height)*np.cos(lat_i)*np.sin(lon_i)
-        Zpg = (N(lat_i) + height)*np.sin(lat_i)
-
-        # ------------------------
-        #  Geocentric coordinates
-        #-------------------------
-
-        X = (N(lat_i) + height)*np.cos(lat_i)*np.cos(lon_i)
-        Y = (N(lat_i) + height)*np.cos(lat_i)*np.sin(lon_i)
-        Z = (N(lat_i)*(1-epsilon**2) + height)*np.sin(lat_i) 
-
-        # ------------------------------
-        #  Observed-centric coordinates
-        #-------------------------------
-
-        Xp = X
-        Yp = Y
-        Zp = (N(lat_i)*(1-epsilon**2) + height)*np.sin(lat_i) + Z_offset
-
-        Rp = np.sqrt(Xp**2 + Yp**2 + Zp**2)
-        Rog = np.sqrt(Xog**2 + Yog**2 + Zog**2)
-
-        air_coords = np.array([Xp/Rp, Yp/Rp, Zp/Rp])
-        obs_coords = np.array([Xog/Rog, Yog/Rog, Zog/Rog])
-
-        arc_angle_o = np.arccos(np.dot(obs_coords, air_coords))
-
-        dX = Xp - Xog
-        dY = Yp - Yog
-        dZ = Zp - Zog
-
-        dR = np.sqrt(dX**2 + dY**2 + dZ**2)
-
-        airdir_coords = np.array([dX/dR, dY/dR, dZ/dR])
-
-        obs_coords = np.array([Xog/Rog, Yog/Rog, Zog/Rog])
-
-        zenith = np.arcsin(np.dot(obs_coords, airdir_coords))
-
-        cozenith = zenith
+        cozenith, arc_angle_o, dist = coord_transform(lat_i, lon_i, height)
 
         df_sample = pd.DataFrame({'obsAoA': obsAoA, 'h': height, 'd': dist, 'repAoA': cozenith*180/np.pi, 'azim': azim, 'timestamp': time, 'arcang': arc_angle_o, 'lat': lats, 'lon': lons, 'icao': icao})
 
@@ -426,11 +392,11 @@ if(args.south):
 
 if(args.synthetic):
 
-    df = pd.read_csv('Data/cleehill.ringway.day2.csv')
-    # df = pd.DataFrame(dataClee, columns=['ICAO','CALLSIGN','ALTITUDE','LONGITUDE',
-    #                                         'LATITUDE','TIMESTAMP','DISTANCE','BHATDOTRHAT',
-    #                                         'BHATDOTRHATV','ARCANG','RP','RSURF','H','MODEL',
-    #                                         'OBS', 'OBSC', 'RMSC'])
+    dataClee = pd.read_csv('Data/cleehill.ringway.day2.csv')
+    df = pd.DataFrame(dataClee, columns=['ICAO','CALLSIGN','ALTITUDE','LONGITUDE',
+                                            'LATITUDE','TIMESTAMP','DISTANCE','BHATDOTRHAT',
+                                            'BHATDOTRHATV','ARCANG','RP','RSURF','H','MODEL',
+                                            'OBS', 'OBSC', 'RMSC'])
     df = df.sort_values('TIMESTAMP')
 
     df['TIMESTAMP'] = df['TIMESTAMP']*0.4
@@ -439,7 +405,7 @@ if(args.synthetic):
 
     df = df[(df['OBSC'] >= obsAoA_min*np.pi/180) & (df['OBSC'] <= obsAoA_max*np.pi/180)]
 
-    azim_min, azim_max = -2.5, 2.5
+    azim_min, azim_max = -5, 5
 
     df = df[(-df['BHATDOTRHAT'] >= np.sin(azim_min*np.pi/180)) & (-df['BHATDOTRHAT'] <= np.sin(azim_max*np.pi/180))]
 
@@ -479,54 +445,7 @@ if(args.synthetic):
 
     lon_i, lat_i = lons*np.pi/180, lats*np.pi/180
 
-    Z_offset = np.sin(lat_Clee*np.pi/180)*N(lat_Clee*np.pi/180)*epsilon**2
-
-    # -------------------------------
-    #  Observer geodetic coordinates
-    #--------------------------------
-
-    Xog = (N(lat_Clee*np.pi/180) + h_Clee)*np.cos(lat_Clee*np.pi/180)*np.cos(lon_Clee*np.pi/180)
-    Yog = (N(lat_Clee*np.pi/180) + h_Clee)*np.cos(lat_Clee*np.pi/180)*np.sin(lon_Clee*np.pi/180)
-    Zog = (N(lat_Clee*np.pi/180) + h_Clee)*np.sin(lat_Clee*np.pi/180)
-
-    # ------------------------
-    #  Geocentric coordinates
-    #-------------------------
-
-    X = (N(lat_i) + height)*np.cos(lat_i)*np.cos(lon_i)
-    Y = (N(lat_i) + height)*np.cos(lat_i)*np.sin(lon_i)
-    Z = (N(lat_i)*(1-epsilon**2) + height)*np.sin(lat_i) 
-
-    # ------------------------------
-    #  Observed-centric coordinates
-    #-------------------------------
-
-    Xp = X
-    Yp = Y
-    Zp = (N(lat_i)*(1-epsilon**2) + height)*np.sin(lat_i) + Z_offset
-
-    Rp = np.sqrt(Xp**2 + Yp**2 + Zp**2)
-    Rog = np.sqrt(Xog**2 + Yog**2 + Zog**2)
-
-    air_coords = np.array([Xp/Rp, Yp/Rp, Zp/Rp])
-    obs_coords = np.array([Xog/Rog, Yog/Rog, Zog/Rog])
-
-    arc_angle_o = np.arccos(np.dot(obs_coords, air_coords))
-
-    dX = Xp - Xog
-    dY = Yp - Yog
-    dZ = Zp - Zog
-
-    dR = np.sqrt(dX**2 + dY**2 + dZ**2)
-    Rog = np.sqrt(Xog**2 + Yog**2 + Zog**2)
-
-    airdir_coords = np.array([dX/dR, dY/dR, dZ/dR])
-
-    obs_coords = np.array([Xog/Rog, Yog/Rog, Zog/Rog])
-
-    zenith = np.arccos(np.dot(obs_coords, airdir_coords))
-
-    cozenith = np.pi/2 - zenith
+    cozenith, arc_angle_o, dist = coord_transform(lat_i, lon_i, height)
 
     df_sample = pd.DataFrame({'obsAoA': obsAoA, 'h': height, 'd': dist, 'repAoA': cozenith*180/np.pi, 'azim': azim, 'timestamp': time, 'arcang': arc_angle_o, 'lat': lats, 'lon': lons, 'icao': icao})
 
@@ -540,6 +459,8 @@ if(args.synthetic):
     plt.xlabel("Number of broadcasts")
     plt.savefig("../plots/PAPERII_aircraft_dist.jpeg", dpi=400)
     df_sample.to_csv(path, header=None, index=None, sep=' ', mode='a')
+
+    mapData(lons, lats, dist)
 
     if(args.geom):
 
@@ -572,28 +493,29 @@ if(args.may):
 
     t = args.time
 
-    df = pd.read_csv('Data/may9data.newcal.dat', sep="\s+")
+    df = pd.read_csv('Data/may8data.spacetime.dat', sep="\s+")
     
     df = df.sort_values('TIMESTAMP')
 
     df['TIMESTAMP'] = df['TIMESTAMP']/5
 
     print(min(df['LATITUDE']), max(df['LATITUDE']), min(df['LONGITUDE']), max(df['LONGITUDE']))
-    obsAoA_min, obsAoA_max = 0.0, 2.0
+    print("Maximum time: ", max(df['TIMESTAMP']))
+    obsAoA_min, obsAoA_max = 0.0, 3.0
 
     df = df[(df['OBSC'] >= obsAoA_min*np.pi/180) & (df['OBSC'] <= obsAoA_max*np.pi/180)]
 
 
-    azim_min, azim_max = -5, 5
+    azim_min, azim_max = -10, 10
 
     df = df[(-df['BHATDOTRHAT'] >= np.sin(azim_min*np.pi/180)) & (-df['BHATDOTRHAT'] <= np.sin(azim_max*np.pi/180))]
-    df = df[(df['TIMESTAMP'] >= int(t)) & (df['TIMESTAMP'] < int(t+900))]
+    df = df[(df['TIMESTAMP'] >= int(t)) & (df['TIMESTAMP'] < int(t+1800))]
 
     print("Subsetting within azim: {} to {}\nand obsAoA: {} to {}".format(azim_min, azim_max, obsAoA_min, obsAoA_max))
 
     azim_range = azim_max - azim_min
 
-    path = "../ADS_B_data/May9_NE_paperII_input_5.000_azim_{}_to_{}_t{}_to_{}.txt".format(azim_min, azim_max, t, t+900)
+    path = "../ADS_B_data/May8_NE_paperII_input_5.000_azim_{}_to_{}_t{}_to_{}.txt".format(azim_min, azim_max, t, t+1800)
     # path = "../ADS_B_data/May_NE_paperII_input_all.txt"
         
     if(os.path.exists(path)):
@@ -625,54 +547,7 @@ if(args.may):
 
     lon_i, lat_i = lons*np.pi/180, lats*np.pi/180
 
-    Z_offset = np.sin(lat_Clee*np.pi/180)*N(lat_Clee*np.pi/180)*epsilon**2
-
-    # -------------------------------
-    #  Observer geodetic coordinates
-    #--------------------------------
-
-    Xog = (N(lat_Clee*np.pi/180) + h_Clee)*np.cos(lat_Clee*np.pi/180)*np.cos(lon_Clee*np.pi/180)
-    Yog = (N(lat_Clee*np.pi/180) + h_Clee)*np.cos(lat_Clee*np.pi/180)*np.sin(lon_Clee*np.pi/180)
-    Zog = (N(lat_Clee*np.pi/180) + h_Clee)*np.sin(lat_Clee*np.pi/180)
-
-    # ------------------------
-    #  Geocentric coordinates
-    #-------------------------
-
-    X = (N(lat_i) + height)*np.cos(lat_i)*np.cos(lon_i)
-    Y = (N(lat_i) + height)*np.cos(lat_i)*np.sin(lon_i)
-    Z = (N(lat_i)*(1-epsilon**2) + height)*np.sin(lat_i) 
-
-    # ------------------------------
-    #  Observed-centric coordinates
-    #-------------------------------
-
-    Xp = X
-    Yp = Y
-    Zp = (N(lat_i)*(1-epsilon**2) + height)*np.sin(lat_i) + Z_offset
-
-    Rp = np.sqrt(Xp**2 + Yp**2 + Zp**2)
-    Rog = np.sqrt(Xog**2 + Yog**2 + Zog**2)
-
-    air_coords = np.array([Xp/Rp, Yp/Rp, Zp/Rp])
-    obs_coords = np.array([Xog/Rog, Yog/Rog, Zog/Rog])
-
-    arc_angle_o = np.arccos(np.dot(obs_coords, air_coords))
-
-    dX = Xp - Xog
-    dY = Yp - Yog
-    dZ = Zp - Zog
-
-    dR = np.sqrt(dX**2 + dY**2 + dZ**2)
-    Rog = np.sqrt(Xog**2 + Yog**2 + Zog**2)
-
-    airdir_coords = np.array([dX/dR, dY/dR, dZ/dR])
-
-    obs_coords = np.array([Xog/Rog, Yog/Rog, Zog/Rog])
-
-    zenith = np.arccos(np.dot(obs_coords, airdir_coords))
-
-    cozenith = np.pi/2 - zenith
+    cozenith, arc_angle_o, dist = coord_transform(lat_i, lon_i, height)
 
     df_sample = pd.DataFrame({'obsAoA': obsAoA, 'h': height, 'd': dist, 'repAoA': cozenith*180/np.pi, 'azim': azim, 'timestamp': time, 'arcang': arc_angle_o, 'lat': lats, 'lon': lons, 'icao': icao})
 
