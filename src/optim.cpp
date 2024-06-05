@@ -49,6 +49,11 @@ int main(int argc, char* argv[])
 
     if(!strcmp(argv[1], "real"))
     {
+
+        //--------------------------------------------------------------------
+        // Generate refractivity profile using data from selected time sample
+        //--------------------------------------------------------------------
+
         std::cout << "------------------------------------------------------------" << std::endl;
         std::cout << "Retrieves one profile for selected time sample." << std::endl;
         std::cout << "------------------------------------------------------------ \n \n" << std::endl;
@@ -60,6 +65,7 @@ int main(int argc, char* argv[])
         std::cin >> iterations;
 
         // Read in refractivity data
+        //--------------------------
 
         Atmosphere atmosphere_input("refractivity/Sep21_N_14.00_(km)_updated_orog.txt");
         //Atmosphere atmosphere_input("refractivity/OCT25_N_16.00_(km)_updated_orog.txt");
@@ -70,10 +76,11 @@ int main(int argc, char* argv[])
         const std::vector<double>& h_profile = atmosphere_input.H();
 
         // Read in ADS-B data
+        //--------------------
 
         // std::string adsbfile = "ADS_B_data/sep_NE_paperII_input_central10_t" + std::to_string(t) + "_" + std::to_string(t+900) + ".txt";
         //std::string adsbfile = "ADS_B_data/PaperII_Oct_south_subset_0_to_0.25hr.txt";
-        std::string adsbfile = "ADS_B_data/May9_NE_paperII_input_5.000_azim_-5_to_5_t" + std::to_string(t) + "_to_" + std::to_string(t+900) + ".txt";
+        std::string adsbfile = "ADS_B_data/May8_NE_paperII_input_5.000_azim_-10_to_10_t" + std::to_string(t) + "_to_" + std::to_string(t+1800) + ".txt";
 
         ADSB adsb_input(adsbfile);
         adsb_input.process();
@@ -92,12 +99,16 @@ int main(int argc, char* argv[])
         tk::spline interp_n(h_profile,N_profile,tk::spline::cspline,true);
         tk::spline interp_ndry(h_profile,NDRY_profile,tk::spline::cspline,true);
 
+
+        // Generate refractivity profile
+        //-------------------------------
+
         for(int i(0); i < n_lev; i++)
         {
 
             n_h[i] = OBSERVER_H + exp(2.7*i/n_lev) - 1.0;
 
-            logn_target[i] = log(1.000 + 325*exp(-(n_h[i] - OBSERVER_H)/8)/1e6);//interp_n(n_h[i])/1e6);//
+            logn_target[i] = log(1.000 + 315*exp(-(n_h[i] - OBSERVER_H)/5)/1e6);//interp_n(n_h[i])/1e6);//
             logn[i] = logn_target[i];//log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/9)/1e6);
             logndry[i] = 0.0;//log(1.000 + interp_ndry(n_h[i])/1e6);
             logn_init[i] = logn_target[i];//log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/9)/1e6);
@@ -145,6 +156,10 @@ int main(int argc, char* argv[])
 
         std::cout << "Size of updated array: " << u_adsb.size() << std::endl;
 
+        
+        // Adjoint retrieval
+        //-------------------
+
         Adjoint Profile(h_adsb, u_adsb, d_adsb, logn, logndry, n_h, 0.0);
 
         std::vector<std::vector<double>> flightpath = Profile.retrieve_paths(OBSERVER_H, iterations, learn_rate, dr);
@@ -152,7 +167,7 @@ int main(int argc, char* argv[])
         std::ostringstream file;
         // file << "flightpaths/PAPERII_retrieve_paths_t" << t << "_" << t+900 << ".txt";
         //file << "flightpaths/IGARSS_retrieve_paths_0.0_0.25hr.txt";
-        file << "flightpaths/May9_flightpath_t" + std::to_string(t) + "_" + std::to_string(t+900) + ".txt";
+        file << "flightpaths/May8_flightpath_-10_to_10_t" + std::to_string(t) + "_" + std::to_string(t+1800) + ".txt";
         std::ofstream rfile(file.str());
 
         for(int i(0); i < (int) u_adsb.size(); i++)
@@ -165,7 +180,7 @@ int main(int argc, char* argv[])
         std::ostringstream file2;
         // file2 << "retrievals/PAPERII_retrieve_NE_TRUE_t" << t << "_" << t+900 << ".txt";
         //file2 << "retrievals/IGARSS_retrieve_0.0_0.25hr.txt";
-        file2 << "retrievals/May9_retrieve_t" + std::to_string(t) + "_" + std::to_string(t+900) + ".txt";
+        file2 << "retrievals/May8_retrieve_-10_to_10_t" + std::to_string(t) + "_" + std::to_string(t+1800) + ".txt";
         std::ofstream rfile2(file2.str());
 
         for(int i(0); i < n_lev; i++)
@@ -177,122 +192,12 @@ int main(int argc, char* argv[])
 
     }
 
-    else if(!strcmp(argv[1], "real_batch"))
-    {
-        std::cout << "------------------------------------------------------------" << std::endl;
-        std::cout << "Retrieves profiles for all four time slots and all batches." << std::endl;
-        std::cout << "------------------------------------------------------------ \n \n" << std::endl;
-        std::cout << "Number of batches: ";
-        std::cin >> num_batch;
-        std::cout << "learning rate (normally Xe-9): ";
-        std::cin >> learn_rate;
-        std::cout << "iterations: ";
-        std::cin >> iterations;
-
-        // Read in refractivity data
-
-        Atmosphere atmosphere_input("refractivity/Sep21_N_14.00_(km)_updated_orog.txt");
-        atmosphere_input.process();
-
-        const std::vector<double>& N_profile = atmosphere_input.N();
-        const std::vector<double>& NDRY_profile = atmosphere_input.NDRY();
-        const std::vector<double>& h_profile = atmosphere_input.H();
-
-        Tracer rayTracer;
-
-        tk::spline interp_n(h_profile,N_profile,tk::spline::cspline,true);
-        tk::spline interp_ndry(h_profile,NDRY_profile,tk::spline::cspline,true);
-
-        for(int i(0); i < n_lev; i++)
-        {
-
-            n_h[i] = OBSERVER_H + exp(2.7*i/n_lev) - 1.0;
-
-            logn[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/9)/1e6);
-            logndry[i] = 0.0;//log(1.000 + interp_ndry(n_h[i])/1e6);
-            logn_init[i] = log(1.000 + interp_n(n_h[0])*exp(-(n_h[i] - OBSERVER_H)/9)/1e6);
-
-            logn_target[i] = log(1.000 + interp_n(n_h[i])/1e6);
-
-        }
-
-        // Read in ADS-B data
-
-        for(int j(0); j < 4; j++)
-        {
-                
-            t = (int) j * 900;
-
-            for(int i(0); i < num_batch; i++)
-            {
-
-                std::string adsbfile = "ADS_B_data/sep_NE_paperII_input_central5_t" + std::to_string(t) + "_" + std::to_string(t+900) + "_sample_" + std::to_string(i) + ".txt";
-
-                ADSB adsb_input(adsbfile);
-                adsb_input.process();
-
-                std::vector<double> u_adsb_I = adsb_input.sin_obsAoA();
-                const std::vector<double> o_adsb_I = adsb_input.obsAoA();
-                const std::vector<double> r_adsb_I = adsb_input.repAoA();
-                const std::vector<double> azim_adsb_I = adsb_input.azim();
-                const std::vector<double> h_adsb_I = adsb_input.rH();
-                const std::vector<double> d_adsb_I = adsb_input.rD();
-                const std::vector<double> arc_adsb_I = adsb_input.arc();
-                const std::vector<double> lat_adsb_I = adsb_input.lat();
-
-                for(int j(0); j < (int) o_adsb_I.size(); j++)
-                {
-                    if(d_adsb_I[j] < 600)
-                    {
-                        u_adsb.push_back(u_adsb_I[j]);
-                        d_adsb.push_back(EARTH_R * arc_adsb_I[j]);
-                        h_adsb.push_back(h_adsb_I[j]);
-                        azim_adsb.push_back(azim_adsb_I[j]);
-                        r_adsb.push_back(r_adsb_I[j]);
-                        
-                    }
-                
-                }
-
-                std::cout << "Size of updated array: " << u_adsb.size() << std::endl;
-
-                Adjoint Profile(h_adsb, u_adsb, d_adsb, logn, logndry, n_h, 0.0);
-
-                std::vector<std::vector<double>> flightpath = Profile.retrieve_paths(OBSERVER_H, iterations, learn_rate, dr);
-
-                std::ostringstream file;
-                file << "flightpaths/PAPERII_retrieve_paths_low_t" << t << "_" << t+900 << "_" << i << ".txt";
-                std::ofstream rfile(file.str());
-
-                for(int i(0); i < (int) u_adsb.size(); i++)
-                {
-                rfile << asin(u_adsb[i])*180.0/PI << ' ' << h_adsb[i] << ' '  << d_adsb[i] << ' ' << flightpath[0][i] << ' ' << flightpath[1][i] << ' ' << r_adsb[i] << ' ' << azim_adsb[i] <<  std::endl;
-                }
-
-                rfile.close();
-
-                std::ostringstream file2;
-                file2 << "retrievals/PAPERII_retrieve_NE_TRUE_low_t" << t << "_" << t+900 << "_" << i << ".txt";
-                std::ofstream rfile2(file2.str());
-
-                for(int i(0); i < n_lev; i++)
-                {
-                rfile2 << (exp(flightpath[2][i]) - 1.0)*1e6 << ' ' << n_h[i] << ' '  << (exp(logn_target[i]) - 1.0)*1e6 << ' ' << (exp(logn_init[i]) - 1.0)*1e6 << ' ' << (exp(logndry[i]) - 1.0)*1e6 << std::endl;
-                }
-
-                rfile2.close();
-
-                u_adsb.clear();
-                d_adsb.clear();
-                h_adsb.clear();
-                azim_adsb.clear();
-                r_adsb.clear();
-            }
-        }
-    }
-
     else if(!strcmp(argv[1], "forward"))
     {
+
+        //--------------------------------------------------------------------
+        // Forward model observations using specified refractivity profile
+        //--------------------------------------------------------------------
 
         Tracer tracer;
 
@@ -383,6 +288,13 @@ int main(int argc, char* argv[])
 
     else if(!strcmp(argv[1], "real_batch"))
     {
+
+        //--------------------------------------------------------------------
+        // Retrieve refractivity profiles for multiple batches:
+        //
+        // - num_batch = 0 returns retrieval for the sample used in paper
+        //--------------------------------------------------------------------
+
         std::cout << "------------------------------------------------------------" << std::endl;
         std::cout << "Retrieves profiles for all four time slots and all batches." << std::endl;
         std::cout << "------------------------------------------------------------ \n \n" << std::endl;
@@ -421,16 +333,15 @@ int main(int argc, char* argv[])
         }
 
         // Read in ADS-B data
-
+ 
         for(int j(0); j < 4; j++)
         {
                 
             t = (int) j * 900;
 
-            for(int i(0); i < num_batch; i++)
+            if (num_batch < 1) 
             {
-
-                std::string adsbfile = "ADS_B_data/sep_NE_paperII_input_central5_t" + std::to_string(t) + "_" + std::to_string(t+900) + "_sample_" + std::to_string(i) + ".txt";
+                std::string adsbfile = "ADS_B_data/sep_NE_paperII_input_central10_t" + std::to_string(t) + "_" + std::to_string(t+900) + ".txt";
 
                 ADSB adsb_input(adsbfile);
                 adsb_input.process();
@@ -465,7 +376,7 @@ int main(int argc, char* argv[])
                 std::vector<std::vector<double>> flightpath = Profile.retrieve_paths(OBSERVER_H, iterations, learn_rate, dr);
 
                 std::ostringstream file;
-                file << "flightpaths/PAPERII_retrieve_paths_low_t" << t << "_" << t+900 << "_" << i << ".txt";
+                file << "flightpaths/PAPERII_retrieve_paths_t" << t << "_" << t+900 << ".txt";
                 std::ofstream rfile(file.str());
 
                 for(int i(0); i < (int) u_adsb.size(); i++)
@@ -476,7 +387,7 @@ int main(int argc, char* argv[])
                 rfile.close();
 
                 std::ostringstream file2;
-                file2 << "retrievals/PAPERII_retrieve_NE_TRUE_low_t" << t << "_" << t+900 << "_" << i << ".txt";
+                file2 << "retrievals/PAPERII_retrieve_NE_TRUE_t" << t << "_" << t+900 << ".txt";
                 std::ofstream rfile2(file2.str());
 
                 for(int i(0); i < n_lev; i++)
@@ -492,11 +403,83 @@ int main(int argc, char* argv[])
                 azim_adsb.clear();
                 r_adsb.clear();
             }
+            else
+            {
+                for(int i(0); i < num_batch; i++)
+                {
+
+                    std::string adsbfile = "ADS_B_data/sep_NE_paperII_input_central5_t" + std::to_string(t) + "_" + std::to_string(t+900) + "_sample_" + std::to_string(i) + ".txt";
+
+                    ADSB adsb_input(adsbfile);
+                    adsb_input.process();
+
+                    std::vector<double> u_adsb_I = adsb_input.sin_obsAoA();
+                    const std::vector<double> o_adsb_I = adsb_input.obsAoA();
+                    const std::vector<double> r_adsb_I = adsb_input.repAoA();
+                    const std::vector<double> azim_adsb_I = adsb_input.azim();
+                    const std::vector<double> h_adsb_I = adsb_input.rH();
+                    const std::vector<double> d_adsb_I = adsb_input.rD();
+                    const std::vector<double> arc_adsb_I = adsb_input.arc();
+                    const std::vector<double> lat_adsb_I = adsb_input.lat();
+
+                    for(int j(0); j < (int) o_adsb_I.size(); j++)
+                    {
+                        if(d_adsb_I[j] < 600)
+                        {
+                            u_adsb.push_back(u_adsb_I[j]);
+                            d_adsb.push_back(EARTH_R * arc_adsb_I[j]);
+                            h_adsb.push_back(h_adsb_I[j]);
+                            azim_adsb.push_back(azim_adsb_I[j]);
+                            r_adsb.push_back(r_adsb_I[j]);
+                            
+                        }
+                    
+                    }
+
+                    std::cout << "Size of updated array: " << u_adsb.size() << std::endl;
+
+                    Adjoint Profile(h_adsb, u_adsb, d_adsb, logn, logndry, n_h, 0.0);
+
+                    std::vector<std::vector<double>> flightpath = Profile.retrieve_paths(OBSERVER_H, iterations, learn_rate, dr);
+
+                    std::ostringstream file;
+                    file << "flightpaths/PAPERII_retrieve_paths_low_t" << t << "_" << t+900 << "_" << i << ".txt";
+                    std::ofstream rfile(file.str());
+
+                    for(int i(0); i < (int) u_adsb.size(); i++)
+                    {
+                    rfile << asin(u_adsb[i])*180.0/PI << ' ' << h_adsb[i] << ' '  << d_adsb[i] << ' ' << flightpath[0][i] << ' ' << flightpath[1][i] << ' ' << r_adsb[i] << ' ' << azim_adsb[i] <<  std::endl;
+                    }
+
+                    rfile.close();
+
+                    std::ostringstream file2;
+                    file2 << "retrievals/PAPERII_retrieve_NE_TRUE_low_t" << t << "_" << t+900 << "_" << i << ".txt";
+                    std::ofstream rfile2(file2.str());
+
+                    for(int i(0); i < n_lev; i++)
+                    {
+                    rfile2 << (exp(flightpath[2][i]) - 1.0)*1e6 << ' ' << n_h[i] << ' '  << (exp(logn_target[i]) - 1.0)*1e6 << ' ' << (exp(logn_init[i]) - 1.0)*1e6 << ' ' << (exp(logndry[i]) - 1.0)*1e6 << std::endl;
+                    }
+
+                    rfile2.close();
+
+                    u_adsb.clear();
+                    d_adsb.clear();
+                    h_adsb.clear();
+                    azim_adsb.clear();
+                    r_adsb.clear();
+                }
+            }
         }
     }
 
     else if(!strcmp(argv[1], "real_paths"))
     {
+
+        //--------------------------------------------------------------------
+        // Simulate ray paths with specified refractivity profile
+        //--------------------------------------------------------------------
 
         Tracer tracer;
 
@@ -613,6 +596,15 @@ int main(int argc, char* argv[])
 
     else if(!strcmp(argv[1], "sens"))
     {
+
+        //--------------------------------------------------------------------
+        // Analysis of sensitivity of retrieval to different systematics:
+        //
+        // - surface refractivity
+        // - zero-point AoA offset
+        // - AoA noise
+        // - receiver altitude uncertainty
+        //--------------------------------------------------------------------
 
         double noise_std = 0.0;
         
@@ -829,6 +821,11 @@ int main(int argc, char* argv[])
 
     else if(!strcmp(argv[1], "may"))
     {
+
+        //--------------------------------------------------------------------
+        // Retrievals using May data
+        //--------------------------------------------------------------------
+
         std::cout << "--------------------------------------------------------------" << std::endl;
         std::cout << "Retrieves one profile for selected time sample from May data." << std::endl;
         std::cout << "-------------------------------------------------------------- \n \n" << std::endl;
@@ -913,6 +910,10 @@ int main(int argc, char* argv[])
 
     else
     {
+
+        //--------------------------------------------------------------------
+        // Synthetic retrievals used in paper.
+        //--------------------------------------------------------------------
     
         std::cout << "learning rate: (normally X*1e-9) ";
         std::cin >> learn_rate;
@@ -983,7 +984,7 @@ int main(int argc, char* argv[])
             std::ostringstream file;
             file << "retrievals/PAPERII_retrieve_NE_RK3_" << argv[1] << "_" << noise_std << ".txt";
             std::ofstream rfile(file.str());
-
+            rfile << "Learn rate: " << learn_rate << ", iterations: " << iterations << std::endl;
             for(int i(0); i < n_lev; i++)
             {
             rfile << (exp(retrieval[i]) - 1.0)*1e6 << ' ' << n_h[i] << ' '  << (exp(logn_target[i]) - 1.0)*1e6 << ' ' << (exp(logn_init[i]) - 1.0)*1e6 << std::endl;

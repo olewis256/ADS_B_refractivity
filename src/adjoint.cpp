@@ -270,7 +270,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
 
         rfilerms << i << ' ' << loss << ' ' << sqrt(n_rms / n_optim.size()) << "\n";
 
-        if ((criterion1 < 1e-7) && (criterion2 < 1e-7))// && (criterion3 <= 1e2))
+        if ((criterion1 < 0.001) && (criterion2 < 1e-8))// && (criterion3 <= 1e2))
         {
             std::cout << "Convergence at iteration " << i << ", stopping minimisation." << "\n";
             std::cout << "Criterion 1:  " << criterion1 << "\n";
@@ -286,6 +286,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
     return n_optim;
 
 };
+
 
 std::vector<std::vector<double> > Adjoint::retrieve_paths(double obs_height, int n_iter, double lrate, double dr)
 {   
