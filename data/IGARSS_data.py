@@ -39,8 +39,8 @@ def Distance(lon_s, lat_s):
     return d
 
 
-data = iris.load("UKV/extracted_fields_sep21_north-east.nc")
-h = iris.load_cube("UKV/orography_sep21_north-east.nc")
+data = iris.load("UKV/extracted_fields_oct25_south.nc")
+h = iris.load_cube("UKV/orography_south.nc")
 
 cube0 = data[0][:,0:70,:,:]
 cube1 = data[1][:,0:70,:,:]
@@ -107,7 +107,7 @@ parser.add_argument('--profile_grad', action='store_true',
 parser.add_argument('--plot', action='store_true',
                     help='Plot the data')
 
-parser.add_argument('--time',type=float,
+parser.add_argument('--time',type=int,
                     help='Choose time (UTC)')
 
 args = parser.parse_args()
@@ -133,7 +133,7 @@ if(args.profile):
         cube0.coord('level_height').points[i] += h[xlat][xlon].data * (1.0 - (cube0.coord('level_height').points[i]/40e3) / 0.4338236) ** 2
 
     if(args.plot):
-        plt.plot(q[t,:,xlat,xlon], cube0.coord('level_height').points)
+        plt.plot(N[t,:,xlat,xlon], cube0.coord('level_height').points)
         # plt.plot(Nd[t,:,xlat,xlon], cube0.coord('level_height').points)
         plt.ylim(0, 12e3)
         plt.show()
@@ -142,7 +142,7 @@ if(args.profile):
 
     full_array = np.stack([cube0.coord('level_height').points, N[t,:,xlat,xlon], Nd[t,:,xlat,xlon], Nw[t,:,xlat,xlon]], axis=1)
 
-    path = "../refractivity/Sep21_N_{}.00_(km)_updated_orog.txt".format(t)
+    path = "../refractivity/OCT25_N_{}.00_(km)_updated_orog.txt".format(t)
 
     if(os.path.exists(path)):
     
@@ -179,7 +179,7 @@ if(args.profile_grad):
     full_array = np.stack([cube0.coord('level_height').points, grad(cube0.coord('level_height').points)], axis=1)
 
 
-    path = "../refractivity/Sep21_N_{}.00_(km)_updated_orog_grad.txt".format(t)
+    path = "../refractivity/OCT25_N_{}.00_(km)_updated_orog_grad.txt".format(t)
 
     if(os.path.exists(path)):
     

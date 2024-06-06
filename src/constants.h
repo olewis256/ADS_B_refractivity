@@ -3,8 +3,9 @@
 
 #include <cmath>
 
-#define EARTH_R 6364.539
-#define PI acos(-1)
-#define OBSERVER_H 0.577
+#define EARTH_R 6391.579965656317//6364.756
+#define PI 3.141592653589793
+#define OBSERVER_H 0.556
+#define EPSILON 0.08181979099
 
 #endif
