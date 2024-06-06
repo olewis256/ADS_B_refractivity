@@ -15,8 +15,13 @@ from scipy.interpolate import CubicSpline
 
 r0 = 6365.362 
 
-dt = datetime(2023, 5,9,00)
-station = '3354'
+t = 12
+d = 15
+m = 12
+y = 2022
+
+dt = datetime(y, m,d,t)
+station = '3354'#'1400'#
 
 df = WyomingUpperAir.request_data(dt, station)
 data = pandas_dataframe_to_unit_arrays(df)
@@ -53,14 +58,14 @@ for i in range(len(h)-1):
 
 fig, ax = plt.subplots()
 
-ax.plot(RH*100, h/1e3,color='green')
-# ax.plot(N, h/1e3, label='total (wet + dry) refractivity', color='black')
+# ax.plot(RH*100, h/1e3,color='green')
+ax.plot(N, h/1e3, label='total (wet + dry) refractivity', color='black')
 #ax.plot(RH, h/1e3, label="dewpoint")
 plt.legend()
 ax.set_ylim(-0.5, 14)
 # ax.set_xlim(50, 390)
 ax.set_ylabel("Altitude (km)")
-ax.set_xlabel("Relative humidity (%)")
+ax.set_xlabel("Refractivity (ppm)")
 #ax.set_title("Camborne (03808): 26/8 12z")
 # plt.savefig("refrac_9Sep.jpeg", dpi=400)
 full_array = np.stack([h, N, Ndry, Nwet], axis=1)
@@ -78,7 +83,7 @@ print(N)
 print(T)
 print(Td)
 print(h)
-# np.savetxt("../refractivity/9May_00z_2024_Watnall_profile_RH.txt", full_array, delimiter=" ")
+# np.savetxt("../refractivity/{}May_{}z_2024_Watnall_profile_RH.txt".format(d, t), full_array, delimiter=" ")
 plt.show()
 # =============================================================================
 # data = np.genfromtxt("Radiosonde_Watnall_28_Apr_0930.txt",skip_header=0)
