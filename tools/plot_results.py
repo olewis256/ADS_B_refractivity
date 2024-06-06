@@ -88,7 +88,7 @@ if (args.index_profile in [1,2,3]):
 
     for i in range(3):
         
-        data[i] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_RK3_{}_{}.txt".format(args.index_profile, noises[i]), sep=' ', header=None)
+        data[i] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_RK3_{}_{}.txt".format(args.index_profile, noises[i]), sep=' ', skiprows=1, header=None)
         data[i].columns = ["retrieve", "h", "target", "init"]
 
 if (args.loss):
@@ -121,7 +121,7 @@ if (args.true and args.profile):
     fig, ax1 = plt.subplots(figsize=(8, 8))
 
     ax1.plot(datar[0]['target'], datar[0]['h'], color='black', label='UKV')
-    ax1.plot(datar[0]['ndry'], datar[0]['h'], color='black', linestyle=':', label='UKV Ndry')
+    # ax1.plot(datar[0]['ndry'], datar[0]['h'], color='black', linestyle=':', label='UKV Ndry')
     ax1.plot(datar[0]['init'], datar[0]['h'], linewidth=0.5, linestyle='--', color='black', label='initial')
     ax1.plot(datar[0]['retrieve'], datar[0]['h'], color='green', label='0-15 mins')
     ax1.plot(datar[1]['retrieve'], datar[1]['h'], color='red', label='15-30 mins')
@@ -1060,17 +1060,24 @@ if (args.sensitivity and args.profile and isinstance(args.n_err, int) and isinst
         data1 = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_-{}m_-{}ppm_0deg.txt".format(args.h_err, args.n_err), sep=' ', header=None)
     data = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_0m_0ppm_0deg.txt", sep=' ', header=None)
 
+    data5 = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_5m_0ppm_0deg.txt", sep=' ', header=None)
+    data5m = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_-5m_0ppm_0deg.txt", sep=' ', header=None)
+
     data0.columns = ["retrieve", "h", "target", "init"]
     data1.columns = ["retrieve", "h", "target", "init"]
     data.columns = ["retrieve", "h", "target", "init"]
 
+    data5.columns = ["retrieve", "h", "target", "init"]
+    data5m.columns = ["retrieve", "h", "target", "init"]
 
-    ax1.plot(data['target'], data['h'], label='radiosonde', color='blue')
+
+    ax1.plot(data['target'], data['h'], label='radiosonde', color='green')
     ax1.plot(data['init'], data['h'], linewidth=0.5, linestyle='--', color='black', label='initial')
     ax1.plot(data['retrieve'], data['h'], color='black', label='retrieved')
-    ax1.plot(data0['retrieve'], data['h'], color='black',linewidth=0.2)
-    ax1.plot(data1['retrieve'], data['h'], color='black',linewidth=0.2)
-    ax1.fill_betweenx(data['h'], data0['retrieve'], data1['retrieve'], alpha=0.3)
+    # ax1.plot(data1['retrieve'], data['h'], color='black',linewidth=0.2)
+    # ax1.plot(data5m['retrieve'], data['h'], color='black',linewidth=0.2)
+    ax1.fill_betweenx(data['h'], data1['retrieve'], data0['retrieve'], alpha=0.3, color='blue', label='10 m')
+    ax1.fill_betweenx(data['h'], data5m['retrieve'], data5['retrieve'], alpha=0.3, color='red', label='5 m')
     
 
     ax1.set_ylabel("Altitude (km)")
@@ -1105,10 +1112,10 @@ if (args.sensitivity and args.profile and isinstance(args.n_err, int) and isinst
 
 if (args.may) and (args.paths): 
 
-    datar[0] = pd.read_csv("../flightpaths/May9_flightpath_t0_900.txt", sep=' ', header=None)
-    datar[1] = pd.read_csv("../flightpaths/May9_flightpath_t900_1800.txt", sep=' ', header=None)
-    datar[2] = pd.read_csv("../flightpaths/May9_flightpath_t1800_2700.txt", sep=' ', header=None)
-    datar[3] = pd.read_csv("../flightpaths/May9_flightpath_t2700_3600.txt", sep=' ', header=None)
+    datar[0] = pd.read_csv("../flightpaths/May8_flightpath_-10_to_10_t0_1800.txt", sep=' ', header=None)
+    datar[1] = pd.read_csv("../flightpaths/May8_flightpath_-10_to_10_t1800_3600.txt", sep=' ', header=None)
+    datar[2] = pd.read_csv("../flightpaths/May8_flightpath_-10_to_10_t3600_5400.txt", sep=' ', header=None)
+    datar[3] = pd.read_csv("../flightpaths/May8_flightpath_-10_to_10_t5400_7200.txt", sep=' ', header=None)
 
     datar[0].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim"]
     datar[1].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim"]
@@ -1129,14 +1136,14 @@ if (args.may) and (args.paths):
 
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(ncols=2,nrows=2,sharey=True,sharex=True,figsize=(10,10))
 
-    # ax1.scatter(-azim1, repAoA1, color='black', label='obs', s=1.5)
-    # ax1.scatter(-azim1, repAoA_init1, linewidth=0.5, color='blue', label='initial',s=1.5)
-    # ax1.scatter(-azim1, repAoA_ret1, color='green', label='retrieved',s=1.5)
+    ax1.scatter(-azim1, repAoA1, color='black', label='obs', s=1.5)
+    ax1.scatter(-azim1, repAoA_init1, linewidth=0.5, color='blue', label='initial',s=1.5)
+    ax1.scatter(-azim1, repAoA_ret1, color='green', label='retrieved',s=1.5)
     # plot = ax1.scatter(-azim1, repAoA1, c=d1,s=5, edgecolors='none')
-    ax1.scatter(d1, h1, s=3, color='black')
+    # ax1.scatter(d1, h1, s=3, color='black')
 
-    # ax1.set_ylabel("Reported AoA (deg.)")
-    ax1.set_ylabel("Altitude (km)")
+    ax1.set_ylabel("Reported AoA (deg.)")
+    # ax1.set_ylabel("Altitude (km)")
     ax1.set_xlabel("(a)")
 
     print("Maximum difference between ellipsoid and spheroid repAoA for plot 1:", max(repAoA1 - repAoA_sph1))
@@ -1144,52 +1151,52 @@ if (args.may) and (args.paths):
     print("Maximum difference between ellipsoid and spheroid repAoA for plot 3:", max(repAoA3 - repAoA_sph3))
     print("Maximum difference between ellipsoid and spheroid repAoA for plot 4:", max(repAoA4 - repAoA_sph4))
 
-    ax1.set_title('$0 \leq t < 15 $ (mins.)')
+    ax1.set_title('$0 \leq t < 30 $ (mins.)')
 
-    # ax2.scatter(-azim2, repAoA2, color='black',s=1.5)
-    # ax2.scatter(-azim2, repAoA_init2, linewidth=0.5, color='blue',s=1.5)
-    # ax2.scatter(-azim2, repAoA_ret2, color='green',s=1.5)
+    ax2.scatter(-azim2, repAoA2, color='black',s=1.5)
+    ax2.scatter(-azim2, repAoA_init2, linewidth=0.5, color='blue',s=1.5)
+    ax2.scatter(-azim2, repAoA_ret2, color='green',s=1.5)
     # plot = ax2.scatter(-azim2, repAoA2, c=d2, s=5, edgecolors='none')
-    ax2.scatter(d2, h2, s=3, color='black')
+    # ax2.scatter(d2, h2, s=3, color='black')
     ax2.set_xlabel("(b)")
 
     ax2.sharey(ax1)
 
-    ax2.set_title('$15 \leq t < 30$ (mins.)')
+    ax2.set_title('$30 \leq t < 60$ (mins.)')
 
-    # ax3.scatter(-azim3, repAoA3, color='black', s=1.5)
-    # ax3.scatter(-azim3, repAoA_init3, linewidth=0.5, color='blue',s=1.5)
-    # ax3.scatter(-azim3, repAoA_ret3, color='green',s=1.5)
+    ax3.scatter(-azim3, repAoA3, color='black', s=1.5)
+    ax3.scatter(-azim3, repAoA_init3, linewidth=0.5, color='blue',s=1.5)
+    ax3.scatter(-azim3, repAoA_ret3, color='green',s=1.5)
     # plot = ax3.scatter(-azim3, repAoA3, c=d3, s=5, edgecolors='none')
-    ax3.scatter(d3, h3, s=3, color='black')
+    # ax3.scatter(d3, h3, s=3, color='black')
 
-    # ax3.set_xlabel("Horizontal angle (deg.) \n (c)")
-    # ax4.set_xlabel("Horizontal angle (deg.) \n (d)")
-    ax3.set_xlabel("Distance (km) \n (c)")
-    ax4.set_xlabel("Distance (km) \n (d)")
-    ax3.set_ylabel("Altitude (km)")
-    # ax3.set_ylabel("Reported AoA (deg.)")
+    ax3.set_xlabel("Horizontal angle (deg.) \n (c)")
+    ax4.set_xlabel("Horizontal angle (deg.) \n (d)")
+    # ax3.set_xlabel("Distance (km) \n (c)")
+    # ax4.set_xlabel("Distance (km) \n (d)")
+    # ax3.set_ylabel("Altitude (km)")
+    ax3.set_ylabel("Reported AoA (deg.)")
 
     ax1.sharex(ax3)
 
-    ax3.set_title('$30 \leq t < 45$ (mins.)')
+    ax3.set_title('$60 \leq t < 90$ (mins.)')
 
-    # ax4.scatter(-azim4, repAoA4, color='black', s=1.5)
-    # ax4.scatter(-azim4, repAoA_init4, linewidth=0.5, color='blue',s=1.5)
-    # ax4.scatter(-azim4, repAoA_ret4, color='green',s=1.5)
+    ax4.scatter(-azim4, repAoA4, color='black', s=1.5)
+    ax4.scatter(-azim4, repAoA_init4, linewidth=0.5, color='blue',s=1.5)
+    ax4.scatter(-azim4, repAoA_ret4, color='green',s=1.5)
     # plot = ax4.scatter(-azim4, repAoA4, c=d4, s=5, edgecolors='none')
-    ax4.scatter(d4, h4, s=3, color='black')
+    # ax4.scatter(d4, h4, s=3, color='black')
 
-    ax4.set_title('$45 \leq t < 60$ (mins.)')
+    ax4.set_title('$90 \leq t < 120$ (mins.)')
 
     # cbar_ax = fig.add_axes([0.95, 0.15, 0.05, 0.7])
     # fig.colorbar(plot, cax=cbar_ax)
 
     fig.legend(bbox_to_anchor=(0.3, 0.68), markerscale=2)
-    # fig.tight_layout()
+    fig.tight_layout()
 
     
-    path = "../plots/May9_retrieve_dist.jpeg"
+    path = "../plots/May8_retrieve_dist.jpeg"
 
     if(os.path.exists(path)):
     
@@ -1215,15 +1222,15 @@ if (args.may) and (args.profile):
 
     data.columns = ['h', 'N', 'Nd', 'Nw']
 
-    # data2 = pd.read_csv("../refractivity/8May_00z_2024_Watnall_profile_RH.txt", sep=' ', header=None)
+    data2 = pd.read_csv("../refractivity/8May_00z_2024_Watnall_profile_RH.txt", sep=' ', header=None)
 
-    # data2.columns = ['h', 'N', 'Nd', 'Nw']
+    data2.columns = ['h', 'N', 'Nd', 'Nw']
 
 
-    datar[0] = pd.read_csv("../retrievals/May9_retrieve_t0_900.txt", sep=' ', header=None)
-    datar[1] = pd.read_csv("../retrievals/May9_retrieve_t900_1800.txt", sep=' ', header=None)
-    datar[2] = pd.read_csv("../retrievals/May9_retrieve_t1800_2700.txt", sep=' ', header=None)
-    datar[3] = pd.read_csv("../retrievals/May9_retrieve_t2700_3600.txt", sep=' ', header=None)
+    datar[0] = pd.read_csv("../retrievals/May8_retrieve_-10_to_10_t0_1800.txt", sep=' ', header=None)
+    datar[1] = pd.read_csv("../retrievals/May8_retrieve_-10_to_10_t1800_3600.txt", sep=' ', header=None)
+    datar[2] = pd.read_csv("../retrievals/May8_retrieve_-10_to_10_t3600_5400.txt", sep=' ', header=None)
+    datar[3] = pd.read_csv("../retrievals/May8_retrieve_-10_to_10_t5400_7200.txt", sep=' ', header=None)
  
     datar[0].columns = ["retrieve", "h", "target", "init", "ndry"]
     datar[1].columns = ["retrieve", "h", "target", "init", "ndry"]
@@ -1236,12 +1243,12 @@ if (args.may) and (args.profile):
     # ax1.plot(datar[0]['target'], datar[0]['h'], color='black', label='UKV')
     # ax1.plot(datar[0]['ndry'], datar[0]['h'], color='black', linestyle=':', label='UKV Ndry')
     ax1.plot(datar[0]['init'], datar[0]['h'], linewidth=0.5, linestyle='--', color='black', label='initial')
-    ax1.plot(datar[0]['retrieve'], datar[0]['h'], color='green', label='0-15 mins')
-    ax1.plot(datar[1]['retrieve'], datar[1]['h'], color='red', label='15-30 mins')
-    ax1.plot(datar[2]['retrieve'], datar[2]['h'], color='blue', label='30-45 mins')
-    ax1.plot(datar[3]['retrieve'], datar[3]['h'], color='yellow', label='45-60 mins')
-    ax1.plot(data['N'], data['h']/1e3, label='radiosonde (9 May)', color='black')
-    # ax1.plot(data2['N'], data2['h']/1e3, label='8May')
+    ax1.plot(datar[0]['retrieve'], datar[0]['h'], color='green', label='0-30 mins')
+    ax1.plot(datar[1]['retrieve'], datar[1]['h'], color='red', label='30-60 mins')
+    ax1.plot(datar[2]['retrieve'], datar[2]['h'], color='blue', label='60-90 mins')
+    ax1.plot(datar[3]['retrieve'], datar[3]['h'], color='yellow', label='90-120 mins')
+    ax1.plot(data['N'], data['h']/1e3, label='radiosonde (00z 9 May)', color='black')
+    ax1.plot(data2['N'], data2['h']/1e3, label='radiosonde (00z 8 May', color='orange')
 
     plt.legend()
     plt.ylim(0, 12)
@@ -1249,7 +1256,7 @@ if (args.may) and (args.profile):
     ax1.set_xlabel("Refractivity (ppm)")
 
     
-    path = "../plots/PAPERII_retrieve_profiles_May.jpeg"
+    path = "../plots/PAPERII_retrieve_profiles_May8_2.jpeg"
 
 
     if(os.path.exists(path)):
