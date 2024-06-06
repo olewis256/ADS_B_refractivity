@@ -23,7 +23,7 @@ epsilon = np.sqrt(1 - (b/a)**2)
 
 lat_Clee = 52.398423
 lon_Clee = -2.595478
-h_Clee = 0.556
+h_Clee = 0.552
 
 #------------------------------------------------
 
@@ -114,9 +114,9 @@ def coord_transform(lat_i, lon_i, height):
 
     obs_coords = np.array([Xog/Rog, Yog/Rog, Zog/Rog])
 
-    zenith = np.arcsin(np.dot(obs_coords, airdir_coords))
+    zenith = np.arccos(np.dot(obs_coords, airdir_coords))
 
-    cozenith = zenith
+    cozenith = np.pi/2 - zenith
 
     return cozenith, arc_angle_o, dR
 
@@ -129,7 +129,7 @@ parser.add_argument('--paper_real', action='store_true',
                     help='Script to generate the sample datasets used in the paper: t = 0, 900, 1800, 2700 (s)')
 
 parser.add_argument('--geom', action='store_true',
-                    help='Plot percentage difference between retrieved and synthetic profile')
+                    help='Plot the altitude variation between spherical approximation and ellipsoid')
 
 parser.add_argument('--profile', action='store_true',
                     help='Plot retrieved profile')
@@ -144,22 +144,22 @@ parser.add_argument('--paths', action='store_true',
                     help='Plot true and retrieved flightpaths')
 
 parser.add_argument('--rand_samples', action='store_true',
-                    help='Script to generate south data (IGARSS)')
+                    help='Script to generate random samples using September NE data')
 
 parser.add_argument('--south', action='store_true',
                     help='Script to generate south data (IGARSS)')
 
 parser.add_argument('--synthetic', action='store_true',
-                    help='Script to generate south data (IGARSS)')
+                    help='Script to generate synthetic subsample data for September NE')
 
 parser.add_argument('--may', action='store_true',
-                    help='Latest data')
+                    help='Script to generate May subsamples.')
 
 parser.add_argument('--time', type=int,
                     help='Start time (s)')
 
 parser.add_argument('--alt', action='store_true',
-                    help='Start time (s)')
+                    help='Generate Clee Hill altitude statistics')
 
 args = parser.parse_args()
 
@@ -182,7 +182,7 @@ if(args.paper_real):
     print(min(df_orig['LATITUDE']), max(df_orig['LATITUDE']), min(df_orig['LONGITUDE']), max(df_orig['LONGITUDE']))
     obsAoA_min, obsAoA_max = 0.0, 2.0
 
-    df_orig = df_orig[(df_orig['OBSC'] >= 0.*np.pi/180) & (df_orig['OBSC'] <= 2*np.pi/180)]
+    df_orig = df_orig[(df_orig['OBSC'] >= obsAoA_max*np.pi/180) & (df_orig['OBSC'] <= obsAoA_min*np.pi/180)]
 
     azim_min, azim_max = -5, 5
 
@@ -306,7 +306,7 @@ if(args.south):
 
     obsAoA_min, obsAoA_max = 0.0, 2.0
 
-    df_orig = df_orig[(df_orig['OBSC'] >= 0.*np.pi/180) & (df_orig['OBSC'] <= 2*np.pi/180)]
+    df_orig = df_orig[(df_orig['OBSC'] >= obsAoA_min*np.pi/180) & (df_orig['OBSC'] <= obsAoA_max*np.pi/180)]
 
     azim_min, azim_max = -2.5, 2.5
 
@@ -469,7 +469,7 @@ if(args.synthetic):
         ang = np.linspace(min_lat, max_lat, 100)
 
         x = N(ang)*np.cos(ang)
-        z = (N(ang)*(1-epsilon**2))*np.sin(ang) + Z_offset
+        z = (N(ang)*(1-epsilon**2))*np.sin(ang) + epsilon**2*N(lat_Clee*np.pi/180)*np.sin(lat_Clee*np.pi/180)
         xo = N(ang)*np.cos(ang)
         zo = (N(ang)*(1-epsilon**2))*np.sin(ang)
 
