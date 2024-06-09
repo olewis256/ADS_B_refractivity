@@ -86,7 +86,6 @@ def coord_transform(lat_i, lon_i, height):
 
     return cozenith, arc_angle_o, dR
 
-
 #------------------------------------------------
 
 class Dataset():
@@ -97,6 +96,7 @@ class Dataset():
 
         self.name: str = params['name']
         self.save_dir: str = params['save_dir']
+        self.plot_dir: str = params['plot_dir']
 
         self.seed: int = params['seed']
         self.size: int = params['size']
@@ -108,12 +108,7 @@ class Dataset():
 
         self.columns = params['columns']
         
-    def load(self, time: int, dt: int) -> None:
-
-        self.t = time
-        self.dt = dt
-        
-        print("Reading in ", self.data_path)
+        print("Reading in: ", self.data_path)
         data = pd.read_csv(self.data_path)
         df = pd.DataFrame(data, columns=self.columns)
 
@@ -126,20 +121,26 @@ class Dataset():
         df = df[(-df['BHATDOTRHAT'] >= np.sin(self.azimin*np.pi/180))
                  & (-df['BHATDOTRHAT'] <= np.sin(self.azimax*np.pi/180))]
         
-        df = df[(df['TIMESTAMP'] >= self.t) 
-                & (df['TIMESTAMP'] < self.t+self.dt)]
+        self.df_froze = df
+     
+    def load(self, time: int, dt: int) -> None:
 
+        self.t = time
+        self.dt = dt
+
+        self.df = self.df_froze
+           
+        self.df = self.df[(self.df['TIMESTAMP'] >= self.t) 
+                & (self.df['TIMESTAMP'] < self.t+self.dt)]
         
-        obsAoA = np.arcsin(np.sin(df['OBSC']))*180/np.pi
-        azim = np.arcsin(df['BHATDOTRHAT'])*180/np.pi
-        dist = df['DISTANCE']
-        height = df['H']
-        icao = df['ICAO']
-        time = df['TIMESTAMP']
-        lons = df['LONGITUDE']
-        lats = df['LATITUDE']
-
-        print(lats)
+        obsAoA = np.arcsin(np.sin(self.df['OBSC']))*180/np.pi
+        azim = np.arcsin(self.df['BHATDOTRHAT'])*180/np.pi
+        dist = self.df['DISTANCE']
+        height = self.df['H']
+        icao = self.df['ICAO']
+        time = self.df['TIMESTAMP']
+        lons = self.df['LONGITUDE']
+        lats = self.df['LATITUDE']
 
         lon_i, lat_i = lons*np.pi/180, lats*np.pi/180
 
@@ -154,7 +155,7 @@ class Dataset():
 
         self.len_data = len(obsAoA)
 
-        print("Dataset length: ", self.len_data)
+        print("Dataset length for sample time {} to {}: {}".format(self.t, self.t+self.dt, self.len_data))
 
     def save(self):
 
@@ -163,13 +164,14 @@ class Dataset():
         except NameError:
             print("Cannot find dataframe.  Ensure data is loaded first.")
 
-        self.name += "_azim_{}_{}_time_{}_{}.txt".format(self.azimin,
+        self.name_file = self.name + "_azim_{}_{}_time_{}_{}_len_{}.txt".format(self.azimin,
                                                          self.azimax,
                                                          self.t,
                                                          self.t+self.dt,
+                                                         self.len_data
                                                          )
 
-        path = os.path.join(self.save_dir, self.name)
+        path = os.path.join(self.save_dir, self.name_file)
 
         if(os.path.exists(path)):
 
@@ -184,6 +186,38 @@ class Dataset():
 
         self.df_sample.to_csv(path, header=True, index=None, sep=' ', mode='a')
 
+    def plot_map(self, save: bool=False):
+
+        fig = plt.figure(figsize=[12, 12])
+
+        ax1 = fig.add_subplot(1,2,1, projection=ccrs.PlateCarree())
+        lines = ax1.gridlines(draw_labels=True, dms=False, x_inline=False, y_inline=False,linewidth=0.1)
+
+        lines.xlabels_top = False
+        lines.ylabels_right = False
+
+        # ax1.set_extent([min(lons)-1, max(lons)+1, min(lats)-1, max(lats)+1], crs=ccrs.PlateCarree())
+        ax1.set_extent([-6, 3, 60, 49], crs=ccrs.PlateCarree())
+        ax1.coastlines(zorder=3)
+
+        plot = ax1.scatter(self.df_froze['LONGITUDE'], self.df_froze['LATITUDE'],
+                        transform=ccrs.PlateCarree(),
+                        s=7,edgecolors='none', c=self.df_froze['DISTANCE'],cmap='viridis')
+        
+        ax1.scatter(-1.2502, 53.0059, s=150, color='black', transform=ccrs.PlateCarree())
+        ax1.scatter(lon_Clee, lat_Clee, s=150, marker='*', color='black',transform=ccrs.PlateCarree())
+
+        cbar = fig.colorbar(plot, ax=ax1, orientation='horizontal', fraction=.05, pad=0.03, shrink=1, aspect=11)
+        cbar.set_label('Distance (km)',labelpad=10)
+
+        plt.tight_layout()
+        if save:
+            save_plot = self.name + "_map.jpeg"
+            plot_path = os.path.join(self.plot_dir, save_plot)
+            print("Saving map plot to: ", plot_path)
+            plt.savefig(plot_path, dpi=700)
+        plt.show()
+
 
 if __name__ == '__main__':
 
@@ -196,16 +230,18 @@ if __name__ == '__main__':
 
     data = Dataset(config)
     
-    print("")
+    print("Using config file with namespace: ", config['Dataset']['name'])
 
-    use_config = input("Use azimuth range {} to {}, and AoA range {} to {} from config file, continue? [y]/n"
+    use_config = input("Use azimuth range {} to {}, and AoA range {} to {} from config file, continue? [y]/n "
                        .format(config['Dataset']['azimin'], config['Dataset']['azimax'], config['Dataset']['AoAmin'], 
                         config['Dataset']['AoAmax']))
 
     if(use_config == 'y'):
 
         data.load(0, 1800)
-        data.save()
+        data.plot_map()
+ 
+        
         
     
     
