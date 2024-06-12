@@ -10,7 +10,7 @@
 #include "../constants.h"
 
 int n_lev = 20;
-double dr = 0.1;
+double dr = 0.001;
 
 double u0, h0, s0;
 double ue, he, se;
@@ -29,6 +29,9 @@ std::vector<double> n1(n_lev, 0);
 std::vector<double> n0(n_lev, 0);
 std::vector<double> n_init(n_lev, 0);
 std::vector<double> n_target(n_lev, 0);
+std::vector<double> n_dry(n_lev, 0);
+std::vector<double> m(n_lev, 0.0);
+std::vector<double> v(n_lev, 0.0);
 
 std::vector<double> forward;
 double forward_target;
@@ -61,6 +64,8 @@ int main()
             n_init[i] = log(1.000 + 320*exp(-n_h[i]/8.0)/1e6);
             
             n_target[i] = log(1.000 + 315*exp(-n_h[i]/8)/1e6);
+            
+            n_dry[i] = 0.0;
 
         }
 
@@ -70,8 +75,8 @@ int main()
         n0[index_n] = log(1.000 + ((exp(n0[index_n]) - 1.0)*1e6 - delta_n)/1e6 );
 
         h0 = 0.01;
-        u0 = sin(0.2*PI/180.0);
-        s0 = 350;
+        u0 = sin(0.11*PI/180.0);
+        s0 = 409.5;
 
         forward_target = rayTracer.trace(h0, u0, s0, dr, n_target, n_h)[0];
 
@@ -80,10 +85,11 @@ int main()
         ue = -forward[1];
         he = forward[0];
         se = forward[2];
+        std::cout << he << std::endl;
 
         lam = 2*(he - forward_target);
 
-        rayTracer.backprop(he, ue, se, dr, n, n[0], n_h, lam, 0.0, 0.0, &index_n, &adj_n, &h0);
+        rayTracer.backprop(he, ue, se, dr, n, n_dry, n[0], n_h, lam, 0.0, 0.0, 0, m, v, &h0, &index_n, &adj_n);
 
         hpos = rayTracer.trace(h0, u0, s0, dr, n1, n_h)[0] - forward_target;
         hneg = rayTracer.trace(h0, u0, s0, dr, n0, n_h)[0] - forward_target;
