@@ -1,0 +1,24 @@
+Dataset:
+  data_path: '/Users/olewis/Refraction/Paper II Module/data/Data/cleesouth.azbase.integrated.csv'
+  save_dir: '/Users/olewis/Refraction/Paper II Module/miscellaneous'
+  plot_dir: '/Users/olewis/Refraction/Paper II Module/plots'
+  name: 'mayNETwp'
+
+  seed: 8520
+  size: 5000
+  columns: ['ICAO','CALLSIGN','ALTITUDE','LONGITUDE',
+            'LATITUDE','TIMESTAMP','DISTANCE','BHATDOTRHAT',
+            'BHATDOTRHATV','ARCANG','RP','RSURF','H','MODEL',
+            'OBS', 'OBSC', 'RMSC']
+
+  AoAmin: 0.0
+  AoAmax: 2.0
+  azimin: -5.0
+  azimax: 5.0
+
+Atmosphere:
+  data_path: '/Users/olewis/Refraction/Paper II Module/data/UKV/extracted_fields_sep21_north-east.nc'
+  orog_path: '/Users/olewis/Refraction/Paper II Module/data/UKV/orography_sep21_north-east.nc'
+  save_dir: '/Users/olewis/Refraction/Paper II Module/miscellaneous'
+  plot_dir: '/Users/olewis/Refraction/Paper II Module/plots'
+  name: 'mayNETwp'

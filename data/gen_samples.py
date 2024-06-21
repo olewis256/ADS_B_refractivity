@@ -18,7 +18,7 @@ epsilon = np.sqrt(1 - (b/a)**2)
 
 lat_Clee = 52.398423
 lon_Clee = -2.595478
-h_Clee = 0.552
+h_Clee = 0.556
 
 def N(lat):
 
