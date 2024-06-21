@@ -57,57 +57,63 @@ std::vector<double> Tracer::trace(const double h0, const double u0, const double
         if(h < OBSERVER_H)
         {
 
-            k1h = dr*u;
-            k2h = k1h;
-            k3h = k1h;
+            k1h = u;
+            k2h = u + dr*k1u/2;
+            k3h = u - dr*k1u + dr*2*k2u;
             
-            k1u = dr*( (1 - u*u) * (0.0 + (1 / r)) );
-            k2u = k1u;
-            k3u = k1u;
-            
+            k1u = (1 - u*u) * (0.0 + (1 / r));
+            k2u = (1 - (u + dr*k1u/2)*(u + dr*k1u/2) )  * ( 0.0 +  1 / (r + dr*k1h/2)  );
+            k3u = (1 - (u - dr*k1u + dr*2*k2u)*(u - dr*k1u + dr*2*k2u)) * ( 0.0 + 1 / (r - dr*k1h + dr*2*k2h));
+
         }
         else
         {
+            {
             i_lev1 = std::upper_bound(n_h.begin(), n_h.end(), h);
 
             dw0_1 = - 1  / ( n_h[i_lev1 - n_h.begin()] - n_h[i_lev1 - 1 - n_h.begin()] );
             dw1_1 = -1 * dw0_1;
-            
+                
             n1 = dw0_1*n[i_lev1 - 1 - n_h.begin()] + dw1_1*n[i_lev1 - n_h.begin()]; 
+            }
 
+            k1h = u;
+            k1u = (1 - u*u) * (n1 + (1 / r));
 
-            k1h = dr*u;
-            k1u = dr*( (1 - u*u) * (n1 + (1 / r)) );
+            // k2
+            {
+                i_lev2 = std::upper_bound(n_h.begin(), n_h.end(), (h + dr*k1h/2));
 
-            i_lev2 = std::upper_bound(n_h.begin(), n_h.end(), (h + k1h/2));
+                dw0_2 = - 1  / ( n_h[i_lev2 - n_h.begin()] - n_h[i_lev2 - 1 - n_h.begin()] );
+                dw1_2 = -1 * dw0_2;
 
-            dw0_2 = - 1  / ( n_h[i_lev2 - n_h.begin()] - n_h[i_lev2 - 1 - n_h.begin()] );
-            dw1_2 = -1 * dw0_2;
+                n2 = dw0_2*n[i_lev2 - 1 - n_h.begin()] + dw1_2*n[i_lev2 - n_h.begin()]; 
+            }
 
-            n2 = dw0_2*n[i_lev2 - 1 - n_h.begin()] + dw1_2*n[i_lev2 - n_h.begin()]; 
+            k2h = u + dr*k1u/2;
+            k2u = (1 - (u + dr*k1u/2)*(u + dr*k1u/2) )  * ( n2 +  1 / (r + dr*k1h/2)  );
 
-            
-            k2h = dr*(u + k1u/2);
-            k2u = dr*( (1 - (u + k1u/2)*(u + k1u/2))  * ( n2 + 1 / (r + k1h/2)));
+            // k3
+            {
+                i_lev3 = std::upper_bound(n_h.begin(), n_h.end(), (h - dr*k1h + dr*2*k2h));
 
-            i_lev3 = std::upper_bound(n_h.begin(), n_h.end(), (h - k1h + 2*k2h));
+                dw0_3 = - 1  / ( n_h[i_lev3 - n_h.begin()] - n_h[i_lev3 - 1 - n_h.begin()] );
+                dw1_3 = -1 * dw0_3;
 
-            dw0_3 = - 1  / ( n_h[i_lev3 - n_h.begin()] - n_h[i_lev3 - 1 - n_h.begin()] );
-            dw1_3 = -1 * dw0_3;
+                n3 = dw0_3*n[i_lev3 - 1 - n_h.begin()] + dw1_3*n[i_lev3 - n_h.begin()];
+            }
 
-            n3 = dw0_3*n[i_lev3 - 1 - n_h.begin()] + dw1_3*n[i_lev3 - n_h.begin()];
+            k3h = u - dr*k1u + dr*2*k2u;
+            k3u = (1 - (u - dr*k1u + dr*2*k2u)*(u - dr*k1u + dr*2*k2u)) * ( n3 + 1 / (r - dr*k1h + dr*2*k2h));
 
+        }
 
-            k3h = dr*(u - k1u + 2*k2u);
-            k3u = dr*( (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u)) * ( n3 + 1 / (r - k1h + 2*k2h)));
-        } 
-
-        h = h + (k1h + 4*k2h + k3h)/6;
+        h = h + dr*(k1h + 4*k2h + k3h)/6;
         s = s + t*EARTH_R*asin(cos(asin(u))*dr / (EARTH_R + h));
-        u = u + (k1u + 4*k2u + k3u)/6;
+        u = u + dr*(k1u + 4*k2u + k3u)/6;
 
        
-        if(s >= dmax || s <= 0)
+        if(s >= dmax || s < 0)
         {
             final_pos = {h, u, s};
 
@@ -188,19 +194,20 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
         if(h < OBSERVER_H)
         {
 
-            k1h = dr*u;
-            k2h = k1h;
-            k3h = k1h;
+            k1h = u;
+            k2h = u + dr*k1u/2;
+            k3h = u - dr*k1u + dr*2*k2u;
             
-            k1u = dr*( (1 - u*u) * (0.0 + (1 / r)) );
-            k2u = k1u;
-            k3u = k1u;
+            k1u = (1 - u*u) * (0.0 + (1 / r));
+            k2u = (1 - (u + dr*k1u/2)*(u + dr*k1u/2) )  * ( 0.0 +  1 / (r + dr*k1h/2)  );
+            k3u = (1 - (u - dr*k1u + dr*2*k2u)*(u - dr*k1u + dr*2*k2u)) * ( 0.0 + 1 / (r - dr*k1h + dr*2*k2h));
 
-            k1lam = dr*( mu * (1 - u*u) * ( 0.0 + 1 / (r*r) ) );
+
+            k1lam = 0.0;//dr*( mu * (1 - u*u) * ( 0.0 + 1 / (r*r) ) );
             k2lam = k1lam;
             k3lam = k1lam;
 
-            k1mu = dr*( -lam + 2 * mu * u * (0.0 + (1 / r)));
+            k1mu = 0.0;//dr*( -lam + 2 * mu * u * (0.0 + (1 / r)));
             k2mu = k1mu;
             k3mu = k1mu;
             
@@ -218,12 +225,12 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
                 n1 = dw0_1*n[i_lev1 - 1 - n_h.begin()] + dw1_1*n[i_lev1 - n_h.begin()]; 
             }
 
-            k1h = dr*u;
-            k1u = dr*( (1 - u*u) * (n1 + (1 / r)) );
+            k1h = u;
+            k1u = (1 - u*u) * (n1 + (1 / r));
 
             // k2
             {
-                i_lev2 = std::upper_bound(n_h.begin(), n_h.end(), (h + k1h/2));
+                i_lev2 = std::upper_bound(n_h.begin(), n_h.end(), (h + dr*k1h/2));
 
                 dw0_2 = - 1  / ( n_h[i_lev2 - n_h.begin()] - n_h[i_lev2 - 1 - n_h.begin()] );
                 dw1_2 = -1 * dw0_2;
@@ -231,12 +238,12 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
                 n2 = dw0_2*n[i_lev2 - 1 - n_h.begin()] + dw1_2*n[i_lev2 - n_h.begin()]; 
             }
 
-            k2h = dr*(u + k1u/2);
-            k2u = dr*( (1 - (u + k1u/2)*(u + k1u/2) )  * ( n2 +  1 / (r + k1h/2)  ) );
+            k2h = u + dr*k1u/2;
+            k2u = (1 - (u + dr*k1u/2)*(u + dr*k1u/2) )  * ( n2 +  1 / (r + dr*k1h/2)  );
 
             // k3
             {
-                i_lev3 = std::upper_bound(n_h.begin(), n_h.end(), (h - k1h + 2*k2h));
+                i_lev3 = std::upper_bound(n_h.begin(), n_h.end(), (h - dr*k1h + dr*2*k2h));
 
                 dw0_3 = - 1  / ( n_h[i_lev3 - n_h.begin()] - n_h[i_lev3 - 1 - n_h.begin()] );
                 dw1_3 = -1 * dw0_3;
@@ -244,19 +251,19 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
                 n3 = dw0_3*n[i_lev3 - 1 - n_h.begin()] + dw1_3*n[i_lev3 - n_h.begin()];
             }
 
-            k3h = dr*(u - k1u + 2*k2u);
-            k3u = dr*( (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u)) * ( n3 + 1 / (r - k1h + 2*k2h)));
+            k3h = u - dr*k1u + dr*2*k2u;
+            k3u = (1 - (u - dr*k1u + dr*2*k2u)*(u - dr*k1u + dr*2*k2u)) * ( n3 + 1 / (r - dr*k1h + dr*2*k2h));
 
             // k lam and mu
             
-            k1lam = dr*( mu * (1 - u*u) * ( n1*n1 + 1 / (r*r) ) );
-            k1mu = dr*( -lam + 2 * mu * u * (n1 + (1 / r)));
+            k1lam = mu * (1 - u*u) * ( n1*n1 + (1 / (r*r)) );
+            k1mu = -lam + 2 * mu * u * (n1 + (1 / r));
 
-            k2lam = dr*( (mu + k1mu/2) * (1 - (u + k1u/2)*(u + k1u/2) ) * ( n2*n2 + 1 / ( (r + k1h/2)*(r + k1h/2) ) ) );
-            k2mu = dr*( -(lam + k1lam/2) + 2 * (mu + k1mu/2) * (u + k1u/2) * ( n2 + 1 / (r + k1h/2) ) );
+            k2lam = (mu + dr*k1mu/2) * (1 - (u + dr*k1u/2)*(u + dr*k1u/2) ) * ( n2*n2 + (1 / ( (r + dr*k1h/2)*(r + dr*k1h/2) )) );
+            k2mu = -(lam + dr*k1lam/2) + 2 * (mu + dr*k1mu/2) * (u + dr*k1u/2) * ( n2 + (1 / (r + dr*k1h/2)) );
 
-            k3lam = dr*( (mu - k1mu + 2*k2mu) * (1 - (u - k1u + 2*k2u)*(u - k1u + 2*k2u) )  * ( n3*n3 + 1 / ( (r - k1h + 2*k2h)*(r - k1h + 2*k2h) ) ) );
-            k3mu = dr*( -(lam - k1lam + 2*k2lam) + 2 * (mu - k1mu + 2*k2mu) * (u - k1u + 2*k2u) * (n3 + 1 / (r - k1h + 2*k2h) ) );
+            k3lam = (mu - dr*k1mu + dr*2*k2mu) * (1 - (u - dr*k1u + dr*2*k2u)*(u - dr*k1u + dr*2*k2u) )  * ( n3*n3 + (1 / ( (r - dr*k1h + dr*2*k2h)*(r - dr*k1h + dr*2*k2h) )) );
+            k3mu = -(lam - dr*k1lam + dr*2*k2lam) + 2 * (mu - dr*k1mu + dr*2*k2mu) * (u - dr*k1u + dr*2*k2u) * (n3 + (1 / (r - dr*k1h + dr*2*k2h)) );
         
         }
         
@@ -284,12 +291,12 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
         // Update respective refractivity values using gradient descent
         //-------------------------------------------------------------
 
-        h = h + (k1h + 4*k2h + k3h)/6;
+        h = h + dr*(k1h + 4*k2h + k3h)/6;
         s = s - EARTH_R*asin(cos(asin(u))*dr / (EARTH_R + h));
-        u = u + (k1u + 4*k2u + k3u)/6;
+        u = u + dr*(k1u + 4*k2u + k3u)/6;
 
-        mu = mu + (k1mu + 4*k2mu + k3mu)/6;
-        lam = lam + (k1lam + 4*k2lam + k3lam)/6;
+        mu = mu + dr*(k1mu + 4*k2mu + k3mu)/6;
+        lam = lam + dr*(k1lam + 4*k2lam + k3lam)/6;
 
         if( s <= 1e-6 || h <= h_obs || h >= n_h.back())
         {   
@@ -326,6 +333,11 @@ std::vector<double> Tracer::backprop(const double h0, const double u0, const dou
 
         
         n[i] -= lrate*m_est / sqrt(v_est + epsilon);
+    
+        // if (n_h[i] > 8)
+        // {
+        //     n[i] = ndry[i];
+        // }
 
         if(n[i] < ndry[i]){n[i] = ndry[i];}
     }

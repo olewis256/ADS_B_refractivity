@@ -18,7 +18,7 @@ void Atmosphere::process()
     if (!inputFile.is_open())
     {
         std::cerr << "Error: Unable to open refractivity profile file " << file << std::endl;
-        return;
+        exit(1);
     }
     else
     {
@@ -37,6 +37,8 @@ void Atmosphere::process()
     }
 
     inputFile.close();
+    std::cout << "Succesful atmosphere file read" << std::endl;
+    
 }
 
 const std::vector<double>& Atmosphere::H() const {
@@ -64,7 +66,7 @@ void ADSB::process()
     if (!inputFile.is_open())
     {
         std::cerr << "Error: Unable to open ADS-B data file " << file << std::endl;
-        return;
+        exit(1);
     }
     else
     {
@@ -73,50 +75,29 @@ void ADSB::process()
 
     double obsaoa, h, d, repaoa, azi, t, arc, lat, lon;
     std::string icao;
-
-    while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t >> arc >> lat >> lon >> icao && (length == 0 || obsAOA_input.size() < length))
+    if(inputFile.is_open())
     {
-        obsAOA_input.push_back(obsaoa);
-        sin_obsAOA_input.push_back(sin(obsaoa*PI/180.0));
-        rH_input.push_back(h);
-        rD_input.push_back(d);
-        repAOA_input.push_back(repaoa);
-        azim_input.push_back(azi);
-        time_input.push_back(t);
-        arc_input.push_back(arc);
-        lat_input.push_back(lat);
+        std::string header;
+        std::getline(inputFile, header); 
 
-    }
-
-    // while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t && (length == 0 || obsAOA_input.size() < length))
-    // {
-    //     obsAOA_input.push_back(obsaoa);
-    //     sin_obsAOA_input.push_back(sin(obsaoa*PI/180.0));
-    //     rH_input.push_back(h);
-    //     rD_input.push_back(d);
-    //     repAOA_input.push_back(repaoa);
-    //     azim_input.push_back(azi);
-    //     time_input.push_back(t);
-
-
-    // }
+        while (inputFile >> obsaoa >> h >> d >> repaoa >> azi >> t >> arc >> lat >> lon >> icao && (length == 0 || obsAOA_input.size() < length))
+        {
+            obsAOA_input.push_back(obsaoa);
+            sin_obsAOA_input.push_back(sin(obsaoa*PI/180.0));
+            rH_input.push_back(h);
+            rD_input.push_back(d);
+            repAOA_input.push_back(repaoa);
+            azim_input.push_back(azi);
+            time_input.push_back(t);
+            arc_input.push_back(arc);
+            lat_input.push_back(lat);
+        }
+    }   
 
     std::cout << "Number of observations: " << obsAOA_input.size() << std::endl;
 
-
-    // while (inputFile >> obsaoa >> repaoa >> h >> d && (sin_obsAOA_input.size() < length))
-    // {
-    //     //obsAOA_input.push_back(obsaoa);
-    //     sin_obsAOA_input.push_back(sin(obsaoa*pi/180.0));
-    //     rH_input.push_back(h);
-    //     rD_input.push_back(d);
-    //     repAOA_input.push_back(repaoa);
-    //     //azim_input.push_back(azi);
-    //     //time_input.push_back(t);
-
-    // }
-
     inputFile.close();
+    std::cout << "Succesful ADS-B file read" << std::endl;
 } 
 
 const std::vector<double>& ADSB::obsAoA() const {

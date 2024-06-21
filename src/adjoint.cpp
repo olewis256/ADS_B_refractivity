@@ -212,6 +212,7 @@ std::vector<double> Adjoint::retrieve_synthetic(double obs_height, int n_iter, d
         for (int jj(0); jj < size; jj++)
         {
             loss_prev += pow((tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] - target_pos[jj]), 2);
+            //std::cout << tracer.trace(obs_height, u[jj], d[jj], dr, n_optim, n_optim_h)[0] << ' ' << target_pos[jj] << std::endl;
         }
 
         n_prev = n_optim;
