@@ -115,8 +115,8 @@ class Dataset():
         df.sort_values('TIMESTAMP')
         df['TIMESTAMP'] *= 0.4
 
-        df = df[(df['OBSC'] >= self.AoAmin*np.pi/180) 
-                & (df['OBSC'] <= self.AoAmax*np.pi/180)]
+        df = df[(np.arcsin(df['OBSC']) >= self.AoAmin*np.pi/180) 
+                & (np.arcsin(df['OBSC']) <= self.AoAmax*np.pi/180)]
         
         df = df[(-df['BHATDOTRHAT'] >= np.sin(self.azimin*np.pi/180))
                  & (-df['BHATDOTRHAT'] <= np.sin(self.azimax*np.pi/180))]
@@ -133,7 +133,7 @@ class Dataset():
         self.df = self.df[(self.df['TIMESTAMP'] >= self.t) 
                 & (self.df['TIMESTAMP'] < self.t+self.dt)]
         
-        obsAoA = np.arcsin(np.sin(self.df['OBSC']))*180/np.pi
+        obsAoA = np.arcsin(self.df['OBSC'])*180/np.pi
         azim = np.arcsin(self.df['BHATDOTRHAT'])*180/np.pi
         dist = self.df['DISTANCE']
         height = self.df['H']
