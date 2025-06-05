@@ -18,7 +18,7 @@ epsilon = np.sqrt(1 - (b/a)**2)
 
 lat_Clee = 52.398423
 lon_Clee = -2.595478
-h_Clee = 0.556
+h_Clee = 0.575
 
 def N(lat):
 
@@ -26,7 +26,7 @@ def N(lat):
 
     return N
 
-def coord_transform(lat_i, lon_i, height):
+def coord_transform(lat_i, lon_i, height) -> tuple:
 
     Z_offset = np.sin(lat_Clee*np.pi/180)*N(lat_Clee*np.pi/180)*epsilon**2
 
@@ -41,6 +41,7 @@ def coord_transform(lat_i, lon_i, height):
     # -------------------------------
     #  Aircraft geodetic coordinates
     #--------------------------------
+    # not used?
 
     Xpg = (N(lat_i) + height)*np.cos(lat_i)*np.cos(lon_i)
     Ypg = (N(lat_i) + height)*np.cos(lat_i)*np.sin(lon_i)
@@ -115,13 +116,15 @@ class Dataset():
         df.sort_values('TIMESTAMP')
         df['TIMESTAMP'] *= 0.4
 
-        df = df[(np.arcsin(df['OBSC']) >= self.AoAmin*np.pi/180) 
-                & (np.arcsin(df['OBSC']) <= self.AoAmax*np.pi/180)]
+        df = df[(df['OBSC'] >= self.AoAmin*np.pi/180) 
+                & (df['OBSC'] <= self.AoAmax*np.pi/180)]
         
         df = df[(-df['BHATDOTRHAT'] >= np.sin(self.azimin*np.pi/180))
                  & (-df['BHATDOTRHAT'] <= np.sin(self.azimax*np.pi/180))]
         
         self.df_froze = df
+
+        self.size = params['size']
      
     def load(self, time: int, dt: int) -> None:
 
@@ -133,7 +136,7 @@ class Dataset():
         self.df = self.df[(self.df['TIMESTAMP'] >= self.t) 
                 & (self.df['TIMESTAMP'] < self.t+self.dt)]
         
-        obsAoA = np.arcsin(self.df['OBSC'])*180/np.pi
+        obsAoA = np.arcsin(np.sin(self.df['OBSC']))*180/np.pi
         azim = np.arcsin(self.df['BHATDOTRHAT'])*180/np.pi
         dist = self.df['DISTANCE']
         height = self.df['H']
@@ -141,7 +144,7 @@ class Dataset():
         time = self.df['TIMESTAMP']
         lons = self.df['LONGITUDE']
         lats = self.df['LATITUDE']
-
+       
         lon_i, lat_i = lons*np.pi/180, lats*np.pi/180
 
         cozenith, arc_angle_o, dist = coord_transform(lat_i, lon_i, height)
@@ -151,9 +154,9 @@ class Dataset():
                                        'timestamp': time, 'arcang': arc_angle_o,
                                        'lat': lats, 'lon': lons, 'icao': icao})
         
-        # self.df_sample = self.df_sample.sample(n=self.size, random_state=self.seed)
+        self.df_sample = self.df_sample.sample(n=self.size, random_state=self.seed)
 
-        self.len_data = len(obsAoA)
+        self.len_data = len(self.df_sample)
 
         print("Dataset length for sample time {} to {}: {}".format(self.t, self.t+self.dt, self.len_data))
 
@@ -164,11 +167,12 @@ class Dataset():
         except NameError:
             print("Cannot find dataframe.  Ensure data is loaded first.")
 
-        self.name_file = self.name + "_azim_{}_{}_time_{}_{}_len_{}.txt".format(self.azimin,
+        self.name_file = self.name + "_azim_{}_{}_time_{}_{}_len_{}_sample{}.txt".format(self.azimin,
                                                          self.azimax,
                                                          self.t,
                                                          self.t+self.dt,
-                                                         self.len_data
+                                                         self.len_data,
+                                                         self.seed
                                                          )
 
         path = os.path.join(self.save_dir, self.name_file)
@@ -217,7 +221,7 @@ class Dataset():
             print("Saving map plot to: ", plot_path)
             plt.savefig(plot_path, dpi=700)
         plt.show()
-
+    
 
 if __name__ == '__main__':
 
@@ -238,8 +242,20 @@ if __name__ == '__main__':
 
     if(use_config == 'y'):
 
-        data.load(0, 1800)
-        data.plot_map()
+        data.load(0, 900)
+        data.save()
+
+        data.load(900, 900)
+        data.save()
+
+        data.load(1800, 900)
+        data.save()
+
+        data.load(2700, 900)
+        data.save()
+        
+
+    
  
         
         
