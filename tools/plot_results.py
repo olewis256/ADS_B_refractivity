@@ -541,8 +541,8 @@ if (args.index_profile in [1,2,3] and args.both):
     ax2.fill_betweenx(data[0]['h'], 100*(data5m['retrieve']-data[0]['target'])/data[0]['target'], 100*(data5['retrieve']-data[0]['target'])/data[0]['target'], alpha=0.2, color='red')
     
     ax3 = ax2.twiny()
-    ax3.plot((std_N2), data[0]['h'], linestyle=':', linewidth=1, color='blue', label='0.01$\degree$ RMSE SD')
-    ax3.plot((std_N3), data[0]['h'], linestyle=':', linewidth=1, color='red', label='0.05$\degree$ RMSE SD')
+    ax3.plot(100*(std_N2/data[0]['target']), data[0]['h'], linestyle=':', linewidth=1, color='blue', label='0.01$\degree$ RMSE SD')
+    ax3.plot(100*(std_N3/data[0]['target']), data[0]['h'], linestyle=':', linewidth=1, color='red', label='0.05$\degree$ RMSE SD')
     
     ax3.set_xlim(-1.0, 1.0)
     ax3.set_xticks([0,0.5,1,1.0])
