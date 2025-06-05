@@ -72,14 +72,18 @@ parser.add_argument('--south', action='store_true',
 args = parser.parse_args()
 
 data = [0]*3
+dataerr1 = [0]*20
+dataerr2 = [0]*20
+dataerr3 = [0]*20
 datar = [0]*4
+datar4 = [0]*2
 noises = [0, 0.01, 0.05]
 
 if (args.index_profile in [1,2,3]):
 
     for i in range(3):
         
-        data[i] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_RK3_{}_{}.txt".format(args.index_profile, noises[i]), sep=' ', skiprows=1, header=None)
+        data[i] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_RK3_{}_{}_575_test.txt".format(args.index_profile, noises[i]), sep=' ', skiprows=1, header=None)
         data[i].columns = ["retrieve", "h", "target", "init"]
 
 if (args.loss):
@@ -87,124 +91,6 @@ if (args.loss):
         
         data[i] = pd.read_csv("../RMS/PAPERII_RMS_NE_RK3_{}.txt".format(noises[i]), sep=' ', header=None)
         data[i].columns = ["iter", "loss", "Nrms"]
-
-
-if (args.true and args.profile):
-
-    if(args.south):
-        datar[0] = pd.read_csv("../retrievals/PAPERII_retrieve_oct_S_TRUE_t0_900.txt", sep=' ', header=None)
-        datar[1] = pd.read_csv("../retrievals/PAPERII_retrieve_oct_S_TRUE_t900_1800.txt", sep=' ', header=None)
-        datar[2] = pd.read_csv("../retrievals/PAPERII_retrieve_oct_S_TRUE_t1800_2700.txt", sep=' ', header=None)
-        datar[3] = pd.read_csv("../retrievals/PAPERII_retrieve_oct_S_TRUE_t2700_3600.txt", sep=' ', header=None)
-
-    else:
-        datar[0] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_TRUE_t0_900_updated.txt", sep=' ', header=None)
-        datar[1] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_TRUE_t900_1800_updated.txt", sep=' ', header=None)
-        datar[2] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_TRUE_t1800_2700_updated.txt", sep=' ', header=None)
-        datar[3] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_TRUE_t2700_3600_updated.txt", sep=' ', header=None)
-        
-    
-    datar[0].columns = ["retrieve", "h", "target", "init", "ndry"]
-    datar[1].columns = ["retrieve", "h", "target", "init", "ndry"]
-    datar[2].columns = ["retrieve", "h", "target", "init", "ndry"]
-    datar[3].columns = ["retrieve", "h", "target", "init", "ndry"]
-
-    fig, ax1 = plt.subplots(figsize=(8, 8))
-
-    ax1.plot(datar[0]['target'], datar[0]['h'], color='black', label='radiosonde')
-    # ax1.plot(datar[0]['ndry'], datar[0]['h'], color='black', linestyle=':', label='UKV Ndry')
-    ax1.plot(datar[0]['init'], datar[0]['h'], linewidth=0.5, linestyle='--', color='black', label='initial')
-    ax1.plot(datar[0]['retrieve'], datar[0]['h'], color='green', label='0-15 mins')
-    ax1.plot(datar[1]['retrieve'], datar[1]['h'], color='red', label='15-30 mins')
-    ax1.plot(datar[2]['retrieve'], datar[2]['h'], color='blue', label='30-45 mins')
-    ax1.plot(datar[3]['retrieve'], datar[3]['h'], color='deepskyblue', label='45-60 mins')
-
-    plt.legend()
-
-    ax1.set_ylabel("Altitude (km)")
-    ax1.set_xlabel("Refractivity (ppm)")
-
-    if(args.south):
-        path = "../plots/PAPERII_retrieve_profiles_oct_S_true.jpeg"
-    else:
-        path = "../plots/PAPERII_retrieve_profiles_true.jpeg"
-
-    if(os.path.exists(path)):
-    
-        ftrue = input("Plot already saved as {}, do you want to overwrite? [y/n]".format(path))
-
-        if(ftrue == 'y'):
-        
-            os.remove(path)
-
-            plt.savefig(path, dpi=400)
-
-    else:
-
-        print("Saving image file to: {}".format(path))
-
-        plt.savefig(path, dpi=400)
-    
-    plt.show()
-
-if (args.true and args.difference):
-
-
-    if(args.south):
-        datar[0] = pd.read_csv("../retrievals/PAPERII_retrieve_oct_S_TRUE_t0_900.txt", sep=' ', header=None)
-        datar[1] = pd.read_csv("../retrievals/PAPERII_retrieve_oct_S_TRUE_t900_1800.txt", sep=' ', header=None)
-        datar[2] = pd.read_csv("../retrievals/PAPERII_retrieve_oct_S_TRUE_t1800_2700.txt", sep=' ', header=None)
-        datar[3] = pd.read_csv("../retrievals/PAPERII_retrieve_oct_S_TRUE_t2700_3600.txt", sep=' ', header=None)
-
-    else:
-        datar[0] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_TRUE_t0_900_updated.txt", sep=' ', header=None)
-        datar[1] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_TRUE_t900_1800_updated.txt", sep=' ', header=None)
-        datar[2] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_TRUE_t1800_2700_updated.txt", sep=' ', header=None)
-        datar[3] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_TRUE_t2700_3600_updated.txt", sep=' ', header=None)
-    
-    datar[0].columns = ["retrieve", "h", "target", "init", "ndry"]
-    datar[1].columns = ["retrieve", "h", "target", "init", "ndry"]
-    datar[2].columns = ["retrieve", "h", "target", "init", "ndry"]
-    datar[3].columns = ["retrieve", "h", "target", "init", "ndry"]
-
-    fig, ax1 = plt.subplots(figsize=(6, 8))
-
-
-    ax1.plot(100*(datar[0]['init'] - datar[0]['target'])/datar[0]['target'], datar[0]['h'], linewidth=0.5, linestyle='--', color='black', label='initial')
-    ax1.plot(100*(datar[0]['retrieve'] - datar[0]['target'])/datar[0]['target'], datar[0]['h'], color='green', label='0-15 mins')
-    ax1.plot(100*(datar[1]['retrieve'] - datar[0]['target'])/datar[0]['target'], datar[0]['h'], color='red', label='15-30 mins')
-    ax1.plot(100*(datar[2]['retrieve'] - datar[0]['target'])/datar[0]['target'], datar[0]['h'], color='blue', label='30-45 mins')
-    ax1.plot(100*(datar[2]['retrieve'] - datar[0]['target'])/datar[0]['target'], datar[0]['h'], color='deepskyblue', label='45-60 mins')
-
-    plt.axvline(0.0, linestyle=':', color='black', label='UKV')
-
-    ax1.set_xlim(-25, 25)
-    ax1.set_ylabel("Altitude (km)")
-    ax1.set_xlabel(r"$\frac{N_{retrieved} - N_{UKV}}{N_{UKV}}$"+" (%)")
-
-    plt.legend()
-
-    fig.tight_layout()
-
-    path = "../plots/PAPERII_retrieve_difference_real_updated.jpeg"
-
-    if(os.path.exists(path)):
-    
-        ftrue = input("Plot already saved as {}, do you want to overwrite? [y/n]".format(path))
-
-        if(ftrue == 'y'):
-        
-            os.remove(path)
-
-            plt.savefig(path, dpi=400)
-
-    else:
-
-        print("Saving image file to: {}".format(path))
-
-        plt.savefig(path, dpi=400)
-
-    plt.show()
 
 
 if (args.true and args.loss):
@@ -215,10 +101,10 @@ if (args.true and args.loss):
         datar[2] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_oct_S_t1800_2700.txt", sep=' ', header=None)
         datar[3] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_oct_S_t2700_3600.txt", sep=' ', header=None)
     else:
-        datar[0] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t0_900_updated.txt", sep=' ', header=None)
-        datar[1] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t900_1800_updated.txt", sep=' ', header=None)
-        datar[2] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t1800_2700_updated.txt", sep=' ', header=None)
-        datar[3] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t2700_3600_updated.txt", sep=' ', header=None)
+        datar[0] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t0_900_updated_check.txt", sep=' ', header=None)
+        datar[1] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t900_1800_updated_check.txt", sep=' ', header=None)
+        datar[2] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t1800_2700_updated_check.txt", sep=' ', header=None)
+        datar[3] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t2700_3600_updated_check.txt", sep=' ', header=None)
 
     datar[0].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
     datar[1].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
@@ -240,7 +126,7 @@ if (args.true and args.loss):
     error3, error3init = rep(hret3, d3) - repAoA3, rep(hinit3, d3) - repAoA3
     error4, error4init = rep(hret4, d4) - repAoA4, rep(hinit4, d4) - repAoA4
 
-    n = 100
+    n = 50
 
     vals = np.linspace(0, 450, n)
     valsp = np.linspace(0, 450, n)
@@ -278,17 +164,17 @@ if (args.true and args.loss):
     ax1.plot(valsp, mean_err_init1, color='blue', label='initial')
     ax1.axhline(0.0, color='black')
    
-    ax1.set_ylabel("Reported AoA error (deg.)")#\n(Aircraft altitude ($10^2$ km))")
+    ax1.set_ylabel("LoS AoA difference (deg.)")#\n(Aircraft altitude ($10^2$ km))")
     ax1.set_xlabel("(a)")
 
-    ax1.set_title('$0 < t \leq 15 $ (mins.)')
+    ax1.set_title('$0 \leq t < 15 $ (mins.)')
 
     ax2.plot(valsp, mean_err2, color='green')
     ax2.plot(valsp, mean_err_init2, color='blue')
     ax2.axhline(0.0, color='black')
     ax2.set_xlabel("(b)")
 
-    ax2.set_title('$15 < t \leq 30$ (mins.)')
+    ax2.set_title('$15 \leq t < 30$ (mins.)')
 
     ax3.plot(valsp, mean_err3, color='green')
     ax3.plot(valsp, mean_err_init3, color='blue')
@@ -296,16 +182,16 @@ if (args.true and args.loss):
 
     ax3.set_xlabel("Distance (km) \n (c)")
     ax4.set_xlabel("Distance (km) \n (d)")
-    ax3.set_ylabel("Reported AoA error (deg.)")
+    ax3.set_ylabel("LoS AoA difference (deg.)")
 
     ax1.sharex(ax3)
 
-    ax3.set_title('$30 < t \leq 45$ (mins.)')
+    ax3.set_title('$30 \leq t < 45$ (mins.)')
 
     ax4.plot(valsp, mean_err4, color='green')
     ax4.plot(valsp, mean_err_init4, color='blue')
     ax4.axhline(0.0, color='black')
-    ax4.set_title('$45 < t\leq 60$ (mins.)')
+    ax4.set_title('$45 \leq t < 60$ (mins.)')
 
     fig.legend(bbox_to_anchor=(0.49, 0.9), markerscale=2)
     fig.tight_layout()
@@ -313,7 +199,7 @@ if (args.true and args.loss):
     if(args.south):
         path = "../plots/PAPERII_retrieve_flightpaths_oct_S_error.jpeg"
     else:
-        path = "../plots/PAPERII_retrieve_flightpaths_error.jpeg"
+        path = "../plots/PAPERII_retrieve_flightpaths_error_dist.jpeg"
 
     if(os.path.exists(path)):
     
@@ -336,10 +222,10 @@ if (args.true and args.loss):
 if (args.true and args.pdf):
 
 
-    datar[0] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t0_900_updated.txt", sep=' ', header=None)
-    datar[1] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t900_1800_updated.txt", sep=' ', header=None)
-    datar[2] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t1800_2700_updated.txt", sep=' ', header=None)
-    datar[3] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t2700_3600_updated.txt", sep=' ', header=None)
+    datar[0] = pd.read_csv("../flightpath/PAPERII_retrieve_paths_t0_900_updated_check.txt", sep=' ', header=None)
+    datar[1] = pd.read_csv("../flightpath/PAPERII_retrieve_paths_t900_1800_updated_check.txt", sep=' ', header=None)
+    datar[2] = pd.read_csv("../flightpath/PAPERII_retrieve_paths_t1800_2700_updated_check.txt", sep=' ', header=None)
+    datar[3] = pd.read_csv("../flightpath/PAPERII_retrieve_paths_t2700_3600_updated_check.txt", sep=' ', header=None)
 
     datar[0].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
     datar[1].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
@@ -387,7 +273,7 @@ if (args.true and args.pdf):
 
     plt.axvline(0.0, linestyle='--', color='black')
 
-    ax1.set_xlabel("Reported AoA difference (deg.)")
+    ax1.set_xlabel("LoS AoA difference (deg.)")
     ax1.set_ylabel("Number of broadcasts")
     
     if(args.south):
@@ -411,191 +297,9 @@ if (args.true and args.pdf):
 
         plt.savefig(path, dpi=400)
 
-
-
-    
-    plt.show()
-
-if (args.fill):
-
-    upper, lower = np.zeros((4, 30)), np.zeros((4, 30))
-
-    data = [[0]*3]*4
-
-    for j in range(4):
-        for i in range(3):
-
-            data[j][i] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_TRUE_t{}_{}_{}.txt".format(j*900, (j+1)*900, i), sep=' ', header=None)
-            
-            data[j][i].columns = ["retrieve", "h", "target", "init", "ndry"]
-
-        for k in range(len(data[j][i])):
-
-            upper[j][k] = max([data[j][0]["retrieve"][k], data[j][1]["retrieve"][k], data[j][2]["retrieve"][k]])
-            lower[j][k] = min([data[j][0]["retrieve"][k], data[j][1]["retrieve"][k], data[j][2]["retrieve"][k]])
-
-            print([data[j][0]["retrieve"][k], data[j][1]["retrieve"][k], data[j][2]["retrieve"][k]])
-
-    fig, ax1 = plt.subplots(figsize=(8, 6))
-    print(upper, lower)
-    ax1.plot(data[0][0]['target'], data[0][0]['h'], color='black', label='UKV')
-    ax1.plot(data[0][0]['init'], data[0][0]['h'], linewidth=0.5, linestyle='--', color='black', label='initial')
-    ax1.fill_betweenx(data[0][0]['h'], lower[0], upper[0])
-    ax1.fill_betweenx(data[1][0]['h'], lower[1], upper[1])
-    ax1.fill_betweenx(data[2][0]['h'], lower[2], upper[2])
-    ax1.fill_betweenx(data[3][0]['h'], lower[3], upper[3])
-
-    plt.legend()
-
-    ax1.set_ylabel("Altitude (km)")
-    ax1.set_xlabel("Refractivity (ppm)")
-
-    if(args.south):
-        path = "../plots/PAPERII_retrieve_profiles_oct_S_true_fill.jpeg"
-    else:
-        path = "../plots/PAPERII_retrieve_profiles_true_fill.jpeg"
-
-    if(os.path.exists(path)):
-    
-        ftrue = input("Plot already saved as {}, do you want to overwrite? [y/n]".format(path))
-
-        if(ftrue == 'y'):
-        
-            os.remove(path)
-
-            plt.savefig(path, dpi=400)
-
-    else:
-
-        print("Saving image file to: {}".format(path))
-
-        plt.savefig(path, dpi=400)
-
-
-
-    
     plt.show()
 
 
-if (args.index_profile in [1,2,3] and args.profile):
-
-    fig, ax1 = plt.subplots(figsize=(8, 8))
-
-
-    ax1.plot(data[0]['target'], data[0]['h'], color='black', label='radiosonde')
-    ax1.plot(data[0]['init'], data[0]['h'], linewidth=0.5, linestyle='--', color='black', label='initial')
-    ax1.plot(data[0]['retrieve'], data[0]['h'], color='green', label='0.00 RMS')
-    ax1.plot(data[1]['retrieve'], data[0]['h'], color='blue', label='{} RMS'.format(noises[1]))
-    ax1.plot(data[2]['retrieve'], data[0]['h'], color='red', label='{} RMS'.format(noises[2]))
-
-    ax1.set_ylabel("Altitude (km)")
-    ax1.set_xlabel("Refractivity (ppm)")
-
-    fig.legend()
-
-    fig.tight_layout()
-    num = len(data[0])
-    RMS1, RMS2, RMS3 = 0,0,0
-    for i in range(num):
-        RMS1 += (data[0]['retrieve'][i] - data[0]['target'][i])**2
-        RMS2 += (data[1]['retrieve'][i] - data[0]['target'][i])**2
-        RMS3 += (data[2]['retrieve'][i] - data[0]['target'][i])**2
-
-    print(np.sqrt(RMS1 / num), np.sqrt(RMS2 / num), np.sqrt(RMS3 / num))
-
-    path = "../plots/PAPERII_retrieve_profiles_synthetic_{}.jpeg".format(args.index_profile)
-
-    if(os.path.exists(path)):
-    
-        ftrue = input("Plot already saved as {}, do you want to overwrite? [y/n]".format(path))
-
-        if(ftrue == 'y'):
-        
-            os.remove(path)
-
-            plt.savefig(path, dpi=400)
-
-    else:
-
-        print("Saving image file to: {}".format(path))
-
-        plt.savefig(path, dpi=400)
-
-
-
-    
-    plt.show()
-
-if (args.index_profile in [1,2,3] and args.difference):
-
-    fig, ax1 = plt.subplots(figsize=(6, 8))
-
-
-    ax1.plot(100*(data[0]['init'] - data[0]['target'])/data[0]['target'], data[0]['h'], color='black', linestyle='--', label='initial')
-    ax1.plot(100*(data[0]['retrieve'] - data[0]['target'])/data[0]['target'], data[0]['h'], color='green', label='0.00 RMS')
-    ax1.plot(100*(data[1]['retrieve'] - data[0]['target'])/data[0]['target'], data[0]['h'], color='blue', label='{} RMS'.format(noises[1]))
-    ax1.plot(100*(data[2]['retrieve'] - data[0]['target'])/data[0]['target'], data[0]['h'], color='red', label='{} RMS'.format(noises[2]))
-
-    plt.axvline(0.0, linestyle=':', color='black')
-
-    ax1.set_xlim(-15, 15)
-    ax1.set_ylabel("Altitude (km)")
-    ax1.set_xlabel(r'$\frac{N_{retrieved} - N_{radiosonde}}{N_{radiosonde}}$'+' (%)')
-
-    plt.legend()
-
-    fig.tight_layout()
-
-    path = "../plots/PAPERII_retrieve_difference_synthetic_{}.jpeg".format(args.index_profile)
-
-    if(os.path.exists(path)):
-    
-        ftrue = input("Plot already saved as {}, do you want to overwrite? [y/n]".format(path))
-
-        if(ftrue == 'y'):
-        
-            os.remove(path)
-
-            plt.savefig(path, dpi=400)
-
-    else:
-
-        print("Saving image file to: {}".format(path))
-
-        plt.savefig(path, dpi=400)
-
-
-
-    
-    plt.show()
-
-if (args.index_profile in [1,2,3] and args.loss):
-
-    fig, (ax1, ax2) = plt.subplots(ncols=2,figsize=(10, 6))
-
-    ax1.plot(data[0]['iter'], data[0]['loss'], color='green', label='0.00 RMS')
-    ax1.plot(data[0]['iter'], data[1]['loss'], color='blue', label='{} RMS')
-    ax1.plot(data[0]['iter'], data[2]['loss'], color='red', label='{} RMS')
-
-    ax1.set_ylabel("Loss")
-    ax1.set_xlabel("Iteration number")
-    ax1.set_yscale('log')
-
-    
-
-    ax2.plot(data[0]['iter'], data[0]['Nrms'], color='green', label='0.00 RMS')
-    ax2.plot(data[0]['iter'], data[1]['Nrms'], color='blue', label='{} RMS'.format(noises[1]))
-    ax2.plot(data[0]['iter'], data[2]['Nrms'], color='red', label='{} RMS'.format(noises[2]))
-
-    ax2.set_ylabel("Refractivity RMS (ppm)")
-    ax2.set_xlabel("Iteration number")
-    
-    plt.legend()
-    fig.tight_layout()
-
-    fig.savefig("../Plots/PAPERII_retrieve_loss.jpeg", dpi=700)
-
-    plt.show()
 
 if (args.heights):
 
@@ -654,28 +358,25 @@ if (args.heights):
 
         plt.savefig(path, dpi=400)
 
-
-
-    
     plt.show()
 
-if (args.error_func):
 
-    if(args.south):
-        datar[0] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_oct_S_t0_900.txt", sep=' ', header=None)
-        datar[1] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_oct_S_t900_1800.txt", sep=' ', header=None)
-        datar[2] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_oct_S_t1800_2700.txt", sep=' ', header=None)
-        datar[3] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_oct_S_t2700_3600.txt", sep=' ', header=None)
-    else:
-        datar[0] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t0_900.txt", sep=' ', header=None)
-        datar[1] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t900_1800.txt", sep=' ', header=None)
-        datar[2] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t1800_2700.txt", sep=' ', header=None)
-        datar[3] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t2700_3600.txt", sep=' ', header=None)
+if (args.paths):
 
-    datar[0].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim"]
-    datar[1].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim"]
-    datar[2].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim"]
-    datar[3].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim"]
+    datar[0] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t0_900_updated_check.txt", sep=' ', header=None)
+    datar[1] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t900_1800_updated_check.txt", sep=' ', header=None)
+    datar[2] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t1800_2700_updated_check.txt", sep=' ', header=None)
+    datar[3] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t2700_3600_updated_check.txt", sep=' ', header=None)
+
+    datar[0].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
+    datar[1].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
+    datar[2].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
+    datar[3].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
+
+    print("Number of obs in 1st sample: ", len(datar[0]))
+    print("Number of obs in 2nd sample: ", len(datar[1]))
+    print("Number of obs in 3rd sample: ", len(datar[2]))
+    print("Number of obs in 4th sample: ", len(datar[3]))
 
     obsAoA1, obsAoA2, obsAoA3, obsAoA4 = datar[0]['obsAoA'], datar[1]['obsAoA'], datar[2]['obsAoA'], datar[3]['obsAoA']
     repAoA1, repAoA2, repAoA3, repAoA4 = datar[0]['repAoA'], datar[1]['repAoA'], datar[2]['repAoA'], datar[3]['repAoA']
@@ -685,38 +386,58 @@ if (args.error_func):
     hret1, hret2, hret3, hret4 = datar[0]['hret'], datar[1]['hret'], datar[2]['hret'], datar[3]['hret']
     azim1, azim2, azim3, azim4 = datar[0]['azim'], datar[1]['azim'], datar[2]['azim'], datar[3]['azim']
 
-    repAoA1_sph, repAoA2_sph, repAoA3_sph, repAoA4_sph = rep(h1, d1), rep(h2, d2), rep(h3, d3), rep(h4, d4)
-
-    error1, error1init = rep(hret1, d1) - repAoA1, rep(hinit1, d1) - repAoA1
-    error2, error2init = rep(hret2, d2) - repAoA2, rep(hinit2, d2) - repAoA2
-    error3, error3init = rep(hret3, d3) - repAoA3, rep(hinit3, d3) - repAoA3
-    error4, error4init = rep(hret4, d4) - repAoA4, rep(hinit4, d4) - repAoA4
-
-    error = np.concatenate([error1, error2, error3, error4])
-    error_init = np.concatenate([error1init, error2init, error3init, error4init])
-    print(stat.stdev(error_init), stat.stdev(error))
-    print(stat.mean(error_init), stat.mean(error))
+    repAoA_sph1, repAoA_sph2, repAoA_sph3, repAoA_sph4 = rep(h1, d1), rep(h2, d2), rep(h3, d3), rep(h4, d4)
+    repAoA_init1, repAoA_init2, repAoA_init3, repAoA_init4 = rep(hinit1, d1), rep(hinit2, d2), rep(hinit3, d3), rep(hinit4, d4)
+    repAoA_ret1, repAoA_ret2, repAoA_ret3, repAoA_ret4 = rep(hret1, d1), rep(hret2, d2), rep(hret3, d3), rep(hret4, d4)
     
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(ncols=2,nrows=2,sharey=True,sharex=True,figsize=(10,10))
 
-    
-    
-    fig, ax1 = plt.subplots(figsize=(8, 6))
+    ax1.scatter(-azim1, repAoA1, color='black', label='AoA$_{LoS}$', s=1.5)
+    ax1.scatter(-azim1, repAoA_init1, linewidth=0.5, color='blue', label='AoA$_{init\_model}$',s=1.5)
+    ax1.scatter(-azim1, repAoA_ret1, color='green', label='AoA$_{ret\_model}$',s=1.5)
+    # ax1.scatter(-azim1, repAoA_sph1, color='skyblue', label='retrieved',s=1.5)
+    ax1.set_ylabel("LoS AoA (deg.)")
+    ax1.set_xlabel("(a)")
 
+    print("Maximum difference between ellipsoid and spheroid repAoA for plot 1:", max(repAoA1 - repAoA_sph1))
 
-    plot = ax1.scatter(d1, h1, c=error1, s=50, edgecolors="none")
+    ax1.set_title('$0 \leq t < 15 $ (mins.)')
 
-   
-    
-    ax1.set_xlabel("Distance (km)")
-    ax1.set_ylabel("Altitude (km)")
+    ax2.scatter(-azim2, repAoA2, color='black',s=1.5)
+    ax2.scatter(-azim2, repAoA_init2, linewidth=0.5, color='blue',s=1.5)
+    ax2.scatter(-azim2, repAoA_ret2, color='green',s=1.5)
+    # ax2.scatter(-azim2, repAoA_sph2, color='skyblue', label='retrieved',s=1.5)
 
-    cbar = fig.colorbar(plot, ax=ax1)
-    cbar.set_label('Retrieved - true rep. AoA (deg.)',labelpad=10)
-    
-    if(args.south):
-        path = "../plots/PAPERII_retrieve_oct_S_STDEV_dist.jpeg"
-    else:
-        path = "../plots/PAPERII_retrieve_STDEV_dist1.jpeg"
+    ax2.set_xlabel("(b)")
+
+    ax2.sharey(ax1)
+
+    ax2.set_title('$15 \leq t < 30$ (mins.)')
+
+    ax3.scatter(-azim3, repAoA3, color='black', s=1.5)
+    ax3.scatter(-azim3, repAoA_init3, linewidth=0.5, color='blue',s=1.5)
+    ax3.scatter(-azim3, repAoA_ret3, color='green',s=1.5)
+    # ax3.scatter(-azim3, repAoA_sph3, color='skyblue', label='retrieved',s=1.5)
+
+    ax3.set_xlabel("Azimuthal angle (deg.) \n (c)")
+    ax4.set_xlabel("Azimuthal angle (deg.) \n (d)")
+    ax3.set_ylabel("LoS AoA (deg.)")
+
+    ax1.sharex(ax3)
+
+    ax3.set_title('$30 \leq t < 45$ (mins.)')
+
+    ax4.scatter(-azim4, repAoA4, color='black', s=1.5)
+    ax4.scatter(-azim4, repAoA_init4, linewidth=0.5, color='blue',s=1.5)
+    ax4.scatter(-azim4, repAoA_ret4, color='green',s=1.5)
+    # ax4.scatter(-azim4, repAoA_sph4, color='skyblue', label='retrieved',s=1.5)
+
+    ax4.set_title('$45 \leq t < 60$ (mins.)')
+
+    fig.legend(bbox_to_anchor=(0.3, 0.68), markerscale=2)
+    fig.tight_layout()
+
+    path = "../plots/PAPERII_retrieve_flightpaths_updated.jpeg"
 
     if(os.path.exists(path)):
     
@@ -726,44 +447,137 @@ if (args.error_func):
         
             os.remove(path)
 
-            plt.savefig(path, dpi=400)
+            fig.savefig(path, dpi=400)
 
     else:
+         
+       print("Saving image file to: {}".format(path))
 
-        print("Saving image file to: {}".format(path))
-
-        plt.savefig(path, dpi=400)
-
-
-
+       fig.savefig(path, dpi=400)
     
     plt.show()
 
-
 if (args.index_profile in [1,2,3] and args.both):
 
-    fig, (ax1, ax2) = plt.subplots(ncols=2,sharey=True,figsize=(10,10))
+    data5 = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_5m_0ppm_0deg_575.txt", sep=' ', header=None)
+    data5m = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_-5m_0ppm_0deg_575.txt", sep=' ', header=None)
+
+    data10 = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_10m_0ppm_0deg_575.txt", sep=' ', header=None)
+    data10m = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_-10m_0ppm_0deg_575.txt", sep=' ', header=None)
+
+    for i in range(20):
+        
+        dataerr2[i] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_RK3_{}_0.01_575_sample{}.txt".format(args.index_profile, i), sep=' ', skiprows=1, header=None)
+        dataerr2[i].columns = ["retrieve", "h", "target", "init"]
+
+        dataerr3[i] = pd.read_csv("../retrievals/PAPERII_retrieve_NE_RK3_{}_0.05_575_sample{}.txt".format(args.index_profile, i), sep=' ', skiprows=1, header=None)
+        dataerr3[i].columns = ["retrieve", "h", "target", "init"]
+    
+    err_N2, err_N3 = [], []
+    abs_N2, abs_N3 = [], []
+    max_prof3, min_prof3 = [], []
+
+    N2_mean = []
+    N3_mean = []
+
+    std_N2 = []
+    std_N3 = []
+
+    for j in range(len(dataerr2[0]["retrieve"])):
+
+        data2_val = [dataerr2[k]["retrieve"][j] for k in range(20)]
+        data3_val = [dataerr3[k]["retrieve"][j] for k in range(20)]
+
+        N2_mean.append(np.mean(data2_val))
+        N3_mean.append(np.mean(data3_val))
+        
+        err_N2.append([np.abs(-np.min(data2_val)+N2_mean[j]),
+                       np.abs(np.max(data2_val)-N2_mean[j])])
+        err_N3.append([np.abs(-np.min(data3_val)+N3_mean[j]),
+                       np.abs(np.max(data3_val)-N3_mean[j])])
+        
+        std_N2.append(np.std(data2_val))
+        std_N3.append(np.std(data3_val))
+        
+        abs_N2.append([100*np.abs(-np.min(data2_val) + N2_mean[j])/N2_mean[j],
+                       100*np.abs((np.max(data2_val) - N2_mean[j])/N2_mean[j])])
+        abs_N3.append([100*np.abs(-np.min(data3_val) + N3_mean[j])/N3_mean[j],
+                       100*np.abs((np.max(data3_val) - N3_mean[j])/N3_mean[j])])             
+        
+        # N_mean.append(np.mean())
+   
+    data10.columns = ["retrieve", "h", "target", "init"]
+    data10m.columns = ["retrieve", "h", "target", "init"]
+
+    data5.columns = ["retrieve", "h", "target", "init"]
+    data5m.columns = ["retrieve", "h", "target", "init"]
+
+    fig, (ax1, ax2) = plt.subplots(ncols=2,sharey=True,figsize=(12,10))
 
     ax1.plot(data[0]['target'], data[0]['h'], color='black', label='radiosonde')
     ax1.plot(data[0]['init'], data[0]['h'], linewidth=0.5, linestyle='--', color='black', label='initial')
-    ax1.plot(data[0]['retrieve'], data[0]['h'], color='green', label='0.00 RMS')
-    ax1.plot(data[1]['retrieve'], data[0]['h'], color='blue', label='{} RMS'.format(noises[1]))
-    ax1.plot(data[2]['retrieve'], data[0]['h'], color='red', label='{} RMS'.format(noises[2]))
+    ax1.errorbar(data[0]['retrieve'], data[0]['h'], color='green', label='0.00$\degree$ RMSE')
+    ax1.errorbar(N2_mean, data[0]['h'], xerr=np.transpose(err_N2), color='blue', label='0.01$\degree$ RMSE')
+    ax1.errorbar(N3_mean, data[0]['h'], xerr=np.transpose(err_N3), color='red', label='0.05$\degree$ RMSE')
+    # ax1.plot(max_prof3, data[0]['h'], color='black')
+    # ax1.plot(min_prof3, data[0]['h'], color='black')
+    
+    ax1.fill_betweenx(data[0]['h'], data10m['retrieve'], data10['retrieve'], alpha=0.2, color='blue', label='10 m')
+    ax1.fill_betweenx(data[0]['h'], data5m['retrieve'], data5['retrieve'], alpha=0.2, color='red', label='5 m')
+    
+    
+    ax1.legend()
     ax1.text(100, 2, s="(a)")
+
+    
     ax1.set_ylabel("Altitude (km)")
     ax1.set_xlabel("Refractivity (ppm)")
-    ax1.legend()
 
-    ax2.plot(100*(data[0]['init'] - data[0]['target'])/data[0]['target'], data[0]['h'], color='black', linestyle='--', label='initial')
-    ax2.plot(100*(data[0]['retrieve'] - data[0]['target'])/data[0]['target'], data[0]['h'], color='green', label='0.00 RMS')
-    ax2.plot(100*(data[1]['retrieve'] - data[0]['target'])/data[0]['target'], data[0]['h'], color='blue', label='{} RMS'.format(noises[1]))
-    ax2.plot(100*(data[2]['retrieve'] - data[0]['target'])/data[0]['target'], data[0]['h'], color='red', label='{} RMS'.format(noises[2]))
+    ax2.plot(100*(data[0]['init'] - data[0]['target'])/data[0]['target'], data[0]['h'], color='black', linestyle='--', linewidth=1)
+    ax2.plot(100*(data[0]['retrieve'] - data[0]['target'])/data[0]['target'], data[0]['h'], color='green')
+    ax2.plot(100*(N2_mean - data[0]['target'])/data[0]['target'], data[0]['h'], color='blue', label='0.01$\degree$ RMSE')#, xerr=np.transpose(abs_N2))
+    ax2.plot(100*(N3_mean - data[0]['target'])/data[0]['target'], data[0]['h'], color='red', label='0.05$\degree$ RMSE')#, xerr=np.transpose(abs_N3))
+    ax2.fill_betweenx(data[0]['h'], 100*(data10m['retrieve']-data[0]['target'])/data[0]['target'], 100*(data10['retrieve']-data[0]['target'])/data[0]['target'], alpha=0.2, color='blue')
+    ax2.fill_betweenx(data[0]['h'], 100*(data5m['retrieve']-data[0]['target'])/data[0]['target'], 100*(data5['retrieve']-data[0]['target'])/data[0]['target'], alpha=0.2, color='red')
     
-    ax2.axvline(0.0, linestyle=':', color='black')
+    ax3 = ax2.twiny()
+    ax3.plot((std_N2), data[0]['h'], linestyle=':', linewidth=1, color='blue', label='0.01$\degree$ RMSE SD')
+    ax3.plot((std_N3), data[0]['h'], linestyle=':', linewidth=1, color='red', label='0.05$\degree$ RMSE SD')
+    
+    ax3.set_xlim(-1.0, 1.0)
+    ax3.set_xticks([0,0.5,1,1.0])
+    ax3.legend(loc='upper left')
+    ax3.set_xlabel('Refractivity error SD (%)')
+    ax2.axvline(0.0, color='black')
     ax2.text(-10, 2, s="(b)")
     ax2.set_xlim(-15, 15)
-    ax2.set_xlabel(r'$\frac{N_{retrieved} - N_{radiosonde}}{N_{radiosonde}}$'+' (%)')
+    ax2.set_xlabel('Refractivity error (%)')
 
+    print(np.std(abs_N2))
+    print(np.std(abs_N3))
+
+    num = len(data[0]['h'])
+    RMS1, RMS2, RMS3, RMSinit, RMSE10, RMSEm10, RMSE5, RMSEm5 = 0,0,0,0,0,0,0,0
+    for i in range(num):
+        RMS1 += (data[0]['retrieve'][i] - data[0]['target'][i])**2
+        RMS2 += (N2_mean[i] - data[0]['target'][i])**2
+        RMS3 += (N3_mean[i] - data[0]['target'][i])**2
+        RMSinit += (data[0]['init'][i] - data[0]['target'][i])**2
+        RMSE10 += (data10['retrieve'][i]-data[0]['target'][i])**2
+        RMSEm10 += (data10m['retrieve'][i]-data[0]['target'][i])**2
+        RMSE5 += (data5['retrieve'][i]-data[0]['target'][i])**2
+        RMSEm5 += (data5m['retrieve'][i]-data[0]['target'][i])**2
+
+    print(np.sqrt(RMS1/num))
+    print(np.sqrt(RMS2/num))
+    print(np.sqrt(RMS3/num))
+    print(np.sqrt(RMSinit/num))
+    print("+10m:", np.sqrt(RMSE10/num))
+    print("-10m:",np.sqrt(RMSEm10/num))
+    print("+5m:",np.sqrt(RMSE5/num))
+    print("-5m:",np.sqrt(RMSEm5/num))
+
+    print("Start height: ", data[0]['h'][0])
     
 
     fig.tight_layout()
@@ -787,177 +601,3 @@ if (args.index_profile in [1,2,3] and args.both):
         plt.savefig(path, dpi=400)
 
     plt.show()
-
-if(args.ray_path):
-    data = pd.read_csv("../flightpaths/PAPERII_ray_paths0_900.txt", sep=' ', header=None)
-
-    data.columns = ['j', 's', 'h']
-
-    fig, ax = plt.subplots()
-
-    ax.scatter(data['s'], data['h'], s=1.5)
-    ax.set_ylabel("Altitude (km)")
-    ax.set_xlabel("Distance (km)")
-    ax.grid(which='both')
-
-    alt_u = np.array([1.5, 2.0, 2.5, 3.0, 4.0, 4.5, 5.0, 6.0, 7.0, 7.5])
-    alt = np.array([0.5, 1.0, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 3.5, 4.0])
-    dist = np.array([20, 40, 60, 80, 100, 120, 140, 160, 180, 200])
-
-    plt.scatter(dist, alt)
-    plt.scatter(dist, alt_u)
-
-    plt.show()
-
-if (args.sensitivity and args.profile and isinstance(args.n_err, int) and isinstance(args.h_err, int)):
-
-    fig, ax1 = plt.subplots(figsize=(8, 8))
-
-    print(args.n_err, args.h_err)
-
-    data0 = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_{}m_{}ppm_0deg.txt".format(args.h_err, args.n_err), sep=' ', header=None)
-    if (args.n_err == 0):
-        data1 = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_-{}m_{}ppm_0deg.txt".format(args.h_err, args.n_err), sep=' ', header=None)
-    elif (args.h_err == 0):
-        data1 = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_{}m_-{}ppm_0deg.txt".format(args.h_err, args.n_err), sep=' ', header=None)
-    else:
-        data1 = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_-{}m_-{}ppm_0deg.txt".format(args.h_err, args.n_err), sep=' ', header=None)
-    data = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_0m_0ppm_0deg.txt", sep=' ', header=None)
-
-    data5 = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_5m_0ppm_0deg.txt", sep=' ', header=None)
-    data5m = pd.read_csv("../retrievals/PAPERII_retrieve_sens_NE_RK3_0_-5m_0ppm_0deg.txt", sep=' ', header=None)
-
-    data0.columns = ["retrieve", "h", "target", "init"]
-    data1.columns = ["retrieve", "h", "target", "init"]
-    data.columns = ["retrieve", "h", "target", "init"]
-
-    data5.columns = ["retrieve", "h", "target", "init"]
-    data5m.columns = ["retrieve", "h", "target", "init"]
-
-
-    ax1.plot(data['target'], data['h'], label='radiosonde', color='green')
-    ax1.plot(data['init'], data['h'], linewidth=0.5, linestyle='--', color='black', label='initial')
-    ax1.plot(data['retrieve'], data['h'], color='black', label='retrieved')
-    # ax1.plot(data1['retrieve'], data['h'], color='black',linewidth=0.2)
-    # ax1.plot(data5m['retrieve'], data['h'], color='black',linewidth=0.2)
-    ax1.fill_betweenx(data['h'], data1['retrieve'], data0['retrieve'], alpha=0.3, color='blue', label='10 m')
-    ax1.fill_betweenx(data['h'], data5m['retrieve'], data5['retrieve'], alpha=0.3, color='red', label='5 m')
-    
-
-    ax1.set_ylabel("Altitude (km)")
-    ax1.set_xlabel("Refractivity (ppm)")
-
-    fig.legend()
-
-    fig.tight_layout()
-
-    path = "../plots/PAPERII_retrieve_sense_synthetic_0.0{}m_{}ppm_0deg.jpeg".format(args.h_err, args.n_err)
-
-    if(os.path.exists(path)):
-    
-        ftrue = input("Plot already saved as {}, do you want to overwrite? [y/n]".format(path))
-
-        if(ftrue == 'y'):
-        
-            os.remove(path)
-
-            plt.savefig(path, dpi=400)
-
-    else:
-
-        print("Saving image file to: {}".format(path))
-
-        plt.savefig(path, dpi=400)
-
-    plt.show()   
-
-if (args.paths):
-
-    datar[0] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t0_900_updated.txt", sep=' ', header=None)
-    datar[1] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t900_1800_updated.txt", sep=' ', header=None)
-    datar[2] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t1800_2700_updated.txt", sep=' ', header=None)
-    datar[3] = pd.read_csv("../flightpaths/PAPERII_retrieve_paths_t2700_3600_updated.txt", sep=' ', header=None)
-
-    datar[0].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
-    datar[1].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
-    datar[2].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
-    datar[3].columns = ["obsAoA", "h", "d", "hinit", "hret", "repAoA", "azim", "time"]
-
-    obsAoA1, obsAoA2, obsAoA3, obsAoA4 = datar[0]['obsAoA'], datar[1]['obsAoA'], datar[2]['obsAoA'], datar[3]['obsAoA']
-    repAoA1, repAoA2, repAoA3, repAoA4 = datar[0]['repAoA'], datar[1]['repAoA'], datar[2]['repAoA'], datar[3]['repAoA']
-    h1, h2, h3, h4 = datar[0]['h'], datar[1]['h'], datar[2]['h'], datar[3]['h']
-    d1, d2, d3, d4 = datar[0]['d'], datar[1]['d'], datar[2]['d'], datar[3]['d']
-    hinit1, hinit2, hinit3, hinit4  = datar[0]['hinit'], datar[1]['hinit'], datar[2]['hinit'], datar[3]['hinit']
-    hret1, hret2, hret3, hret4 = datar[0]['hret'], datar[1]['hret'], datar[2]['hret'], datar[3]['hret']
-    azim1, azim2, azim3, azim4 = datar[0]['azim'], datar[1]['azim'], datar[2]['azim'], datar[3]['azim']
-
-    repAoA_sph1, repAoA_sph2, repAoA_sph3, repAoA_sph4 = rep(h1, d1), rep(h2, d2), rep(h3, d3), rep(h4, d4)
-    repAoA_init1, repAoA_init2, repAoA_init3, repAoA_init4 = rep(hinit1, d1), rep(hinit2, d2), rep(hinit3, d3), rep(hinit4, d4)
-    repAoA_ret1, repAoA_ret2, repAoA_ret3, repAoA_ret4 = rep(hret1, d1), rep(hret2, d2), rep(hret3, d3), rep(hret4, d4)
-    
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(ncols=2,nrows=2,sharey=True,sharex=True,figsize=(10,10))
-
-    ax1.scatter(-azim1, repAoA1, color='black', label='obs', s=1.5)
-    ax1.scatter(-azim1, repAoA_init1, linewidth=0.5, color='blue', label='initial',s=1.5)
-    ax1.scatter(-azim1, repAoA_ret1, color='green', label='retrieved',s=1.5)
-    # ax1.scatter(-azim1, repAoA_sph1, color='skyblue', label='retrieved',s=1.5)
-    ax1.set_ylabel("Reported AoA (deg.)")
-    ax1.set_xlabel("(a)")
-
-    print("Maximum difference between ellipsoid and spheroid repAoA for plot 1:", max(repAoA1 - repAoA_sph1))
-
-    ax1.set_title('$0 \leq t < 15 $ (mins.)')
-
-    ax2.scatter(-azim2, repAoA2, color='black',s=1.5)
-    ax2.scatter(-azim2, repAoA_init2, linewidth=0.5, color='blue',s=1.5)
-    ax2.scatter(-azim2, repAoA_ret2, color='green',s=1.5)
-    # ax2.scatter(-azim2, repAoA_sph2, color='skyblue', label='retrieved',s=1.5)
-
-    ax2.set_xlabel("(b)")
-
-    ax2.sharey(ax1)
-
-    ax2.set_title('$15 \leq t < 30$ (mins.)')
-
-    ax3.scatter(-azim3, repAoA3, color='black', s=1.5)
-    ax3.scatter(-azim3, repAoA_init3, linewidth=0.5, color='blue',s=1.5)
-    ax3.scatter(-azim3, repAoA_ret3, color='green',s=1.5)
-    # ax3.scatter(-azim3, repAoA_sph3, color='skyblue', label='retrieved',s=1.5)
-
-    ax3.set_xlabel("Horizontal angle (deg.) \n (c)")
-    ax4.set_xlabel("Horizontal angle (deg.) \n (d)")
-    ax3.set_ylabel("Reported AoA (deg.)")
-
-    ax1.sharex(ax3)
-
-    ax3.set_title('$30 \leq t < 45$ (mins.)')
-
-    ax4.scatter(-azim4, repAoA4, color='black', s=1.5)
-    ax4.scatter(-azim4, repAoA_init4, linewidth=0.5, color='blue',s=1.5)
-    ax4.scatter(-azim4, repAoA_ret4, color='green',s=1.5)
-    # ax4.scatter(-azim4, repAoA_sph4, color='skyblue', label='retrieved',s=1.5)
-
-    ax4.set_title('$45 \leq t < 60$ (mins.)')
-
-    fig.legend(bbox_to_anchor=(0.3, 0.68), markerscale=2)
-    fig.tight_layout()
-
-    path = "../plots/PAPERII_retrieve_flightpaths.jpeg"
-
-    if(os.path.exists(path)):
-    
-        ftrue = input("Plot already saved as {}, do you want to overwrite? [y/n]".format(path))
-
-        if(ftrue == 'y'):
-        
-            os.remove(path)
-
-            fig.savefig(path, dpi=400)
-
-        else:
-
-            print("Saving image file to: {}".format(path))
-
-            fig.savefig(path, dpi=400)
-        
-        plt.show()
